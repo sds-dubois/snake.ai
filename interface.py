@@ -4,9 +4,12 @@ Interface for the multiplayer snake game
 
 # imports
 import utils
+import random
 
 # global variables
-MOVES = [(1,0), (0,1), (-1,0), (0,-1)]
+MOVES = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
+CANDY_VAL = 1                               # default candy value
+CANDY_BONUS = 5                             # candy value for dead snakes
 
 
 class Snake:
@@ -17,8 +20,10 @@ class Snake:
     def __init__(self, position):
         self.position = position
         self.points = 0
+        self.last_tail = None
 
     def move(self, direction):
+        self.last_tail = self.position[-1]
         head = add(self.position[0], direction)
         self.position = [head] + self.position[:-1]
 
@@ -27,6 +32,12 @@ class Snake:
 
     def orientation(self):
         return add(self.position[0], self.position[1], lambda = -1)
+
+    def add_points(val):
+        self.points += val
+        # check if size increases
+        if val == CANDY_BONUS or self.points % CANDY_BONUS:
+            self.position.append(self.last_tail)
 
 
 class Candy:
@@ -55,6 +66,11 @@ class State:
         else:
             return len(self.snakes) == 1
 
+    def addCandy(pos, val):
+        if not pos in [p for s in self.snakes.keys() for p in self.snakes[s].position] \
+            and not pos in self.candies.keys():
+            self.candies[pos] = val
+
     def update(self, moves):
         """
         `moves` is a dict {snake_id => move}
@@ -67,7 +83,7 @@ class State:
             self.snakes[id].move(m)
             head = self.snakes[id].position[0]
             if head in self.candies:
-                self.snakes[id].points += self.candies.get(head)
+                self.snakes[id].add_points(self.candies.get(head))
                 del self.candies[head]
 
         # remove snakes which bumped into other snakes
@@ -77,18 +93,19 @@ class State:
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
             if self.snakes[id].position[0] in otherSnakes:
                 deads.append(id)
-                # add candy
-                self.candies[self.snakes[id].position[0]] = 5
+                # add candy at head's position before last move
+                self.candies[self.snakes[id].position[1]] = CANDY_BONUS
 
         for id in deads:
             print "Snake {} died with {} points".format(id, self.snakes[id].points)
-            del self.snakes
+            del self.snakes[id]
 
 
 class Game:
-    def __init__(self, grid_size):
+    def __init__(self, grid_size, max_iter = None):
         self.grid_size = grid_size
-    
+        self.max_iter = max_iter
+
     def startState(self, n_snakes, n_candies):
         """
         Initialize a game with `n_snakes` snakes of size 2 
@@ -121,6 +138,8 @@ class Game:
         `actions` is a dict {snake_id => move}
         Update snakes' position and randomly add some candies.
         """
-        # TODO: add candies
-        return state.update(actions)
+        state = state.update(actions)
+        rand_pos = (random.randint(1, self.grid_size[0]-1), random.randint(1, self.grid_size[1]-1))
+        state.addCandy(rand_pos, CANDY_VAL)
+        return state
 
