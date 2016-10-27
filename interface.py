@@ -124,7 +124,7 @@ class State:
                 self.candies[self.snakes[id].position[1]] = CANDY_BONUS
 
         for id in deads:
-            print "Snake {} died with {} points".format(id, self.snakes[id].points)
+            # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
 
         return self
@@ -143,7 +143,7 @@ class Game:
         and `n_candies` candies, randomly located over the grid.
         Guarantees a valid state.
         """
-        log_base2 = math.ceil(math.log(self.n_snakes) / math.log(2))
+        log_base2 = math.ceil(math.log(self.n_snakes) / math.log(2)) +1
         n_squares_per_row = int(2 ** (log_base2 / 2))
         square_size = self.grid_size / int(n_squares_per_row)
         assignment = random.sample(range(n_squares_per_row ** 2), self.n_snakes)
@@ -163,9 +163,9 @@ class Game:
 
     def isEnd(self, state):
         if self.max_iter:
-            return len(state.snakes) == 1 or state.iter == self.max_iter
+            return len(state.snakes) <= 1 or state.iter == self.max_iter
         else:
-            return len(state.snakes) == 1
+            return len(state.snakes) <= 1
 
     def isOnGrid(self, p):
         """

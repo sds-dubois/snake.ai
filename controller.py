@@ -19,7 +19,11 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
 
         # Update the state
         state = game.succ(state, actions)
-    state.printGrid(game.grid_size)
+
+    if verbose > 0:
+        state.printGrid(game.grid_size)
+
+    return state
 
 
 if __name__ ==  "__main__":
