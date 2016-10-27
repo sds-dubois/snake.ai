@@ -1,3 +1,5 @@
+import sys
+
 """
 Utils
 """
@@ -15,3 +17,9 @@ def dist(tuple1, tuple2):
     """Manhattan distance"""
     return abs(tuple1[0] - tuple2[0]) + abs(tuple1[1] - tuple2[1])
 
+def progressBar(iteration, n_total, size=25):
+    if iteration % (n_total/size) == 0:
+        sys.stdout.write('\r')
+        i = iteration*size/n_total
+        sys.stdout.write("[{}{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
+        sys.stdout.flush()
