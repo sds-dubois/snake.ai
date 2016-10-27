@@ -142,8 +142,9 @@ class Game:
         for snake, assign in enumerate(assignment):
             rand_pos = (random.randint(1, square_size-2),
                         random.randint(1, square_size-2))
-            head = rand_pos + ((n_squares / assign), (n_squares % assign))
-            snakes[snake] = [head, utils.add(head, random.sample(MOVES, 1))]
+            head = (rand_pos[0] + (n_squares / (assign+1))*square_size,
+                    rand_pos[1] + (n_squares % (assign+1))*square_size)
+            snakes[snake] = [head, utils.add(head, random.sample(MOVES, 1)[0])]
 
         candies_to_put = 2*int(self.candy_ratio)+1
         start_state = State(snakes, {})
