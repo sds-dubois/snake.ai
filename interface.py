@@ -1,10 +1,11 @@
 """
-Interface for the multiplayer snake game
+Interface for the multi player snake game
 """
 
 # imports
-import utils
+from utils import *
 import random
+import math
 
 # global variables
 MOVES = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
@@ -31,9 +32,9 @@ class Snake:
         return len(self.position)
 
     def orientation(self):
-        return add(self.position[0], self.position[1], lambda = -1)
+        return add(self.position[0], self.position[1], mu = -1)
 
-    def add_points(val):
+    def add_points(self, val):
         self.points += val
         # check if size increases
         if val == CANDY_BONUS or self.points % CANDY_BONUS:
@@ -53,7 +54,7 @@ class Candy:
 class State:
     """
     State object for the multiplayer snake game.
-    Defined by a dictionnary {id => snake} and {position => value} for candies.
+    Defined by a dictionary {id => snake} and {position => value} for candies.
     """
     def __init__(self, snakes, candies):
         self.snakes = snakes
@@ -66,10 +67,18 @@ class State:
         else:
             return len(self.snakes) == 1
 
-    def addCandy(pos, val):
+    def addCandy(self, pos, val):
+        """
+        Adds a candy of value val and position pos. If there is already a snake at the position, we don't add it
+        :param pos: the position for the candy as a tuple
+        :param val: the value of the candy
+        :return: True if the candy has been added, False if not
+        """
         if not pos in [p for s in self.snakes.keys() for p in self.snakes[s].position] \
-            and not pos in self.candies.keys():
+                and not pos in self.candies.keys():
             self.candies[pos] = val
+            return True
+        return False
 
     def update(self, moves):
         """
@@ -102,19 +111,25 @@ class State:
 
 
 class Game:
-    def __init__(self, grid_size, max_iter = None):
+    def __init__(self, grid_size, n_snakes=2, candy_ratio=1., max_iter = None):
         self.grid_size = grid_size
         self.max_iter = max_iter
+        self.n_snakes = n_snakes
+        self.candy_ratio = candy_ratio
 
-    def startState(self, n_snakes, n_candies):
+    def startState(self):
         """
         Initialize a game with `n_snakes` snakes of size 2 
         and `n_candies` candies, randomly located over the grid.
         Guarantees a valid state.
         """
         # TODO: make it random and allow more snakes
-        assert n_snakes == 2
-        assert grid_size[0] > 10 and grid_size[1] > 10
+        assert self.grid_size >= 10
+
+        log_base2 = math.ceil(math.log(self.n_snakes, base=2))
+        assignment = random.sample(range(2**log_base2), self.n_snakes)
+
+
         snakes = {"0": [(2,2), (2,1)], "1": [(8,8), (9,8)]}
         candies = [Candy((4,4), 1), Candy((3,4), 1), Candy((6,1), 1)]
         return State(snakes, candies)
