@@ -3,7 +3,7 @@ Interface for the multi player snake game
 """
 
 # imports
-from utils import *
+import utils
 import random
 import math
 
@@ -25,7 +25,7 @@ class Snake:
 
     def move(self, direction):
         self.last_tail = self.position[-1]
-        head = add(self.position[0], direction)
+        head = utils.add(self.position[0], direction)
         self.position = [head] + self.position[:-1]
 
     def size(self):
@@ -143,7 +143,7 @@ class Game:
             rand_pos = (random.randint(1, square_size-2),
                         random.randint(1, square_size-2))
             head = rand_pos + ((n_squares / assign), (n_squares % assign))
-            snakes[snake] = [head, add(head, random.sample(MOVES, 1))]
+            snakes[snake] = [head, utils.add(head, random.sample(MOVES, 1))]
 
         candies_to_put = 2*int(self.candy_ratio)+1
         start_state = State(snakes, {})
@@ -163,7 +163,7 @@ class Game:
         """
         snake = state.snakes.get(player)
         head = snake.position[0]
-        return [m for m in MOVES if m != mult(snake.orientation(), -1) and self.isOnGrid(add(head, m))]
+        return [m for m in MOVES if m != utils.mult(snake.orientation(), -1) and self.isOnGrid(utils.add(head, m))]
 
     def succ(self, state, actions):
         """
