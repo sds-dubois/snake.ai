@@ -10,7 +10,7 @@ import math
 # global variables
 MOVES = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
 CANDY_VAL = 1                               # default candy value
-CANDY_BONUS = 5                             # candy value for dead snakes
+CANDY_BONUS = 2                             # candy value for dead snakes
 
 
 class Snake:
@@ -37,18 +37,8 @@ class Snake:
     def addPoints(self, val):
         self.points += val
         # check if size increases
-        if val == CANDY_BONUS or self.points % CANDY_BONUS:
+        if val == CANDY_BONUS or (self.points % CANDY_BONUS == 0):
             self.position.append(self.last_tail)
-
-
-class Candy:
-    """
-    Candy object.
-    Defined by its (x,y) position and value.
-    """
-    def __init__(self, position, value):
-        self.position = position
-        self.value = value
 
 
 class State:
@@ -74,17 +64,17 @@ class State:
             return '*'
         for id, s in self.snakes.iteritems():
             if (i,j) == s.position[0]:
-                return str(id)
+                return '@'
             if (i,j) in s.position[1:]:
-                return '#'
+                return str(id)
         return ' '
 
     def printGrid(self, grid_size):
         s = "--- state {} ---\n".format(self.iter)
-        s += "-"*grid_size+'\n'
+        s += "-" * (grid_size + 1) + '\n'
         for i in range(grid_size):
-            s += '|'+ ''.join(self.shape(i,j) for j in range(grid_size)) + '|\n'
-        s += "-"*grid_size+'\n'
+            s += '|' + ''.join(self.shape(i,j) for j in range(grid_size)) + '|\n'
+        s += "-" * (grid_size + 1)+ '\n'
         print s
 
     def addCandy(self, pos, val):
@@ -141,7 +131,7 @@ class State:
 
 
 class Game:
-    def __init__(self, grid_size, n_snakes=2, candy_ratio=1., max_iter = None):
+    def __init__(self, grid_size, n_snakes = 2, candy_ratio = 1., max_iter = None):
         self.grid_size = grid_size
         self.max_iter = max_iter
         self.n_snakes = n_snakes
@@ -153,7 +143,7 @@ class Game:
         and `n_candies` candies, randomly located over the grid.
         Guarantees a valid state.
         """
-        log_base2 = math.ceil(math.log(self.n_snakes)/math.log(2))
+        log_base2 = math.ceil(math.log(self.n_snakes) / math.log(2))
         n_squares_per_row = int(2 ** (log_base2 / 2))
         square_size = self.grid_size / int(n_squares_per_row)
         assignment = random.sample(range(n_squares_per_row ** 2), self.n_snakes)
@@ -162,11 +152,11 @@ class Game:
 
         snakes = {}
         for snake, assign in enumerate(assignment):
-            head = (random.randint(1, square_size-2) + (assign / n_squares_per_row)*square_size,
-                    random.randint(1, square_size-2) + (assign % n_squares_per_row)*square_size)
+            head = (random.randint(1, square_size-2) + (assign / n_squares_per_row) * square_size,
+                    random.randint(1, square_size-2) + (assign % n_squares_per_row) * square_size)
             snakes[snake] = Snake([head, utils.add(head, random.sample(MOVES, 1)[0])])
 
-        candies_to_put = 2*int(self.candy_ratio)+1
+        candies_to_put = 2 * int(self.candy_ratio) + 1
         start_state = State(snakes, {})
         start_state.addNRandomCandies(candies_to_put, self.grid_size)
         return start_state
