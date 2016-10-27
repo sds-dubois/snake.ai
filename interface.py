@@ -61,6 +61,8 @@ class State:
 
     def shape(self, i, j):
         if (i,j) in self.candies:
+            if self.candies[(i,j)] == CANDY_BONUS:
+                return '+'
             return '*'
         for id, s in self.snakes.iteritems():
             if (i,j) == s.position[0]:
@@ -120,8 +122,9 @@ class State:
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
             if self.snakes[id].position[0] in otherSnakes:
                 deads.append(id)
-                # add candy at head's position before last move
-                self.candies[self.snakes[id].position[1]] = CANDY_BONUS
+                # add candies on the snake position before last move
+                for p in self.snakes[id].position:
+                    self.candies[p] = CANDY_BONUS
 
         for id in deads:
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)
