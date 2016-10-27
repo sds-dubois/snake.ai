@@ -2,7 +2,7 @@ import sys
 from time import sleep
 import numpy as np
 from controller import controller
-from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy
+from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
 from utils import progressBar
 
 
@@ -20,17 +20,18 @@ def simulate(n_simul, strategies, grid_size, candy_ratio = 1., max_iter = 500):
 
 
 if __name__ ==  "__main__":
-    MAX_ITER = 500
+    MAX_ITER = 1000
 
     if len(sys.argv) > 1:
         n_simul = int(sys.argv[1])
     else:
         n_simul = 100
 
-    strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy]
+    strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
     results, iterations = simulate(n_simul, strategies, 20, max_iter = MAX_ITER)
 
     print "=======Results======="
+    print "Run {} simulations".format(n_simul)
     print "Max iteration:", MAX_ITER, "\n"
     for i in range(len(strategies)):
         print "\t Snake {} wins {:.2f}% of the games".format(i, results[i]*100)

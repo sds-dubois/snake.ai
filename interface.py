@@ -46,6 +46,9 @@ class State:
     State object for the multiplayer snake game.
     Defined by a dictionary {id => snake} and {position => value} for candies.
     """
+
+    grid_size = None
+
     def __init__(self, snakes, candies):
         self.snakes = snakes
         self.candies = dict((c.position, c.value) for c in candies)
@@ -120,7 +123,7 @@ class State:
         for id in self.snakes.keys():
             # list of (x,y) points occupied by other snakes
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
-            if self.snakes[id].position[0] in otherSnakes:
+            if self.snakes[id].position[0] in otherSnakes or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size):
                 deads.append(id)
                 # add candies on the snake position before last move
                 for p in self.snakes[id].position:
@@ -139,6 +142,7 @@ class Game:
         self.max_iter = max_iter
         self.n_snakes = n_snakes
         self.candy_ratio = candy_ratio
+        State.grid_size = grid_size
 
     def startState(self):
         """
@@ -169,19 +173,13 @@ class Game:
         else:
             return len(state.snakes) <= 1
 
-    def isOnGrid(self, p):
-        """
-        Check if position `p` is valid for the grid.
-        """
-        return p[0] > 0 and p[1] > 0 and p[0] < self.grid_size and p[1] < self.grid_size
-
     def actions(self, state, player):
         """
         List of possible actions for `player`.
         """
         snake = state.snakes.get(player)
         head = snake.position[0]
-        return [m for m in MOVES if m != utils.mult(snake.orientation(), -1) and self.isOnGrid(utils.add(head, m))]
+        return [m for m in MOVES if m != utils.mult(snake.orientation(), -1) and utils.isOnGrid(utils.add(head, m), self.grid_size)]
 
     def succ(self, state, actions):
         """
