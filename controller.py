@@ -1,6 +1,6 @@
 import sys
 from interface import Game
-from strategies import greedy, smartGreedy
+from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 1):
     game = Game(grid_size, len(strategies), candy_ratio = candy_ratio, max_iter = max_iter)
@@ -31,4 +31,4 @@ if __name__ ==  "__main__":
         max_iter = int(sys.argv[1])
     else:
         max_iter = None
-    controller([greedy, smartGreedy, greedy], 20, max_iter = max_iter, verbose = 1)
+    controller([randomStrategy, greedyStrategy, smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)

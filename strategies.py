@@ -5,7 +5,14 @@ Strategies for players.
 from utils import *
 import random
 
-def greedy(id, state, game):
+def randomStrategy(id, state, game):
+    """
+    Takes random actions
+    """
+    return random.sample(game.actions(state, id), 1)[0]
+
+
+def greedyStrategy(id, state, game):
     """
     Take action which brings us closest to a candy - without even 
     looking at other snakes. 
@@ -17,7 +24,7 @@ def greedy(id, state, game):
     best_move = min((dist(add(head, move), candy), move) for candy in state.candies.keys() for move in actions)
     return best_move[1]
 
-def smartGreedy(id, state, game):
+def smartGreedyStrategy(id, state, game):
     """
     Take action which brings us closest to a candy
     Checks if we're hitting another snake
