@@ -61,6 +61,14 @@ class State:
         self.candies = dict((c.position, c.value) for c in candies)
         self.iter = 0
 
+    def __str__(self):
+        s = "--- state {} ---\n".format(self.iter)
+        s += "- snakes:\n"
+        s += "\n".join(["\t{}:\t{}\t-\t{}".format(id, s.points, s.position) for id,s in self.snakes.iteritems()])
+        s += "\n- candies:\n"
+        s += "\n".join(["\t{}\t{}".format(v, pos) for pos,v in self.candies.iteritems()])
+        return s
+
     def isEnd(self, max_iter = None):
         if max_iter:
             return len(self.snakes) == 1 or self.iter == max_iter 
