@@ -32,7 +32,7 @@ class Snake:
         return len(self.position)
 
     def orientation(self):
-        return add(self.position[0], self.position[1], mu = -1)
+        return utils.add(self.position[0], self.position[1], mu = -1)
 
     def addPoints(self, val):
         self.points += val
