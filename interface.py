@@ -143,8 +143,10 @@ class Game:
         and `n_candies` candies, randomly located over the grid.
         Guarantees a valid state.
         """
+
         log_base2 = math.ceil(math.log(self.n_snakes) / math.log(2)) +1
-        n_squares_per_row = int(2 ** (log_base2 / 2))
+
+        n_squares_per_row = int(math.ceil(math.sqrt(self.n_snakes))**2)
         square_size = self.grid_size / int(n_squares_per_row)
         assignment = random.sample(range(n_squares_per_row ** 2), self.n_snakes)
 
