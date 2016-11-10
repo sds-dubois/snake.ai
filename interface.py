@@ -6,13 +6,15 @@ Interface for the multi player snake game
 import utils
 import random
 import math
+from move import Move
 
 # global variables
 ACCELERATION = True
-MOVES = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
+DIRECTIONS = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
 NORM_MOVES = [1]
 if ACCELERATION:
     NORM_MOVES.append(2)                    # acceleration moves
+MOVES = [Move(dir, norm) for dir in DIRECTIONS for norm in NORM_MOVES]
 CANDY_VAL = 1                               # default candy value
 CANDY_BONUS = 2                             # candy value for dead snakes
 
@@ -29,16 +31,16 @@ class Snake:
         self.last_tail = None
 
     def predictHead(self, move):
-        direction, norm = move
-        return utils.add(self.position[0], direction, mu=norm)
+        return move.apply(self.position[0])
 
-    def move(self, direction, norm):
+    def move(self, move):
         '''
         Moves according the direction vectors, if it accelerates, returns the position to put a candy on
-        :param direction: the tuple encoding the direction
-        :param norm: if 1 normal move, if 2 acceleration
+        :param move: a (direction, norm) tuple with direction being the tuple encoding the direction
+        and norm being 1 for a normal move and 2 for acceleration
         :return: None if the snake didn't accelerate, the position to put a candy on, if it did accelerate
         '''
+        norm, direction = move.norm(), move.direction()
         if norm == 2:
             self.last_tail = self.position[-2]
             second = utils.add(self.position[0], direction)
@@ -73,8 +75,6 @@ class Snake:
             self.last_tail = self.position[-1]
             del self.position[-1]
             self.size -= 1
-
-
 
 class State:
     """
@@ -148,8 +148,8 @@ class State:
         # update positions
         candies_to_add = []
         accelerated = {}
-        for id, (dir, norm) in moves.iteritems():
-            new_candy_pos = self.snakes[id].move(dir, norm)
+        for id, m in moves.iteritems():
+            new_candy_pos = self.snakes[id].move(m)
 
             # We remember where to add candies when the snake accelerated
             if new_candy_pos is not None:
@@ -162,7 +162,7 @@ class State:
                 del self.candies[head]
 
             # If the snake accelerated, we check if the second part of the body touches a candy
-            if norm == 2:
+            if m.norm() == 2:
                 accelerated[id] = True
                 second = self.snakes[id].position[1]
                 if second in self.candies:
@@ -219,7 +219,7 @@ class Game:
         for snake, assign in enumerate(assignment):
             head = (random.randint(1, square_size-2) + (assign / n_squares_per_row) * square_size,
                     random.randint(1, square_size-2) + (assign % n_squares_per_row) * square_size)
-            snakes[snake] = Snake([head, utils.add(head, random.sample(MOVES, 1)[0])])
+            snakes[snake] = Snake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
 
         candies_to_put = 2 * int(self.candy_ratio) + 1
         start_state = State(snakes, {})
@@ -238,10 +238,10 @@ class Game:
         """
         snake = state.snakes.get(player)
         head = snake.position[0]
-        return [(m,n) for m in MOVES for n in NORM_MOVES
-                if m != utils.mult(snake.orientation(), -1)
-                and (n == 1 or snake.size > 2)
-                and utils.isOnGrid(utils.add(head, m, mu=n), self.grid_size)]
+        return [m for m in MOVES
+                if m.direction() != utils.mult(snake.orientation(), -1)
+                and (m.norm() == 1 or snake.size > 2)
+                and utils.isOnGrid(m.apply(head), self.grid_size)]
 
     def simple_actions(self, state, player):
         """
@@ -249,8 +249,10 @@ class Game:
         """
         snake = state.snakes.get(player)
         head = snake.position[0]
-        return [(m,1) for m in MOVES if m != utils.mult(snake.orientation(), -1)
-                and utils.isOnGrid(utils.add(head, m), self.grid_size)]
+        return [m for m in MOVES if
+                m.norm() == 1
+                and m.direction() != utils.mult(snake.orientation(), -1)
+                and utils.isOnGrid(m.apply(head), self.grid_size)]
 
     def succ(self, state, actions):
         """

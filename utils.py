@@ -21,6 +21,14 @@ def norm1(tuple):
     """Norm 1"""
     return dist(tuple, tuple)
 
+def norm(move):
+    '''
+    The norm of a move
+    :param move: a move
+    :return: its norm
+    '''
+    return move[1]
+
 def isOnGrid(p, grid_size):
     """
     Check if position `p` is valid for the grid.
@@ -33,3 +41,4 @@ def progressBar(iteration, n_total, size=25):
         i = iteration*size/n_total
         sys.stdout.write("[{}{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
         sys.stdout.flush()
+
