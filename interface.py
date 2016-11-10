@@ -8,7 +8,11 @@ import random
 import math
 
 # global variables
+ACCELERATION = True
 MOVES = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
+NORM_MOVES = [1]
+if ACCELERATION:
+    NORM_MOVES.append(2)                    # acceleration moves
 CANDY_VAL = 1                               # default candy value
 CANDY_BONUS = 2                             # candy value for dead snakes
 
@@ -20,13 +24,34 @@ class Snake:
     """
     def __init__(self, position):
         self.position = position
-        self.points = 0
+        self.points = 2*CANDY_BONUS
+        self.size = 2
         self.last_tail = None
 
-    def move(self, direction):
+    def predictHead(self, move):
+        direction, norm = move
+        return utils.add(self.position[0], direction, mu=norm)
+
+    def move(self, direction, norm):
+        '''
+        Moves according the direction vectors, if it accelerates, returns the position to put a candy on
+        :param direction: the tuple encoding the direction
+        :param norm: if 1 normal move, if 2 acceleration
+        :return: None if the snake didn't accelerate, the position to put a candy on, if it did accelerate
+        '''
+        if norm == 2:
+            self.last_tail = self.position[-2]
+            second = utils.add(self.position[0], direction)
+            head = utils.add(second, direction)
+            self.position = [head, second] + self.position[:-2]
+            self.removePoints(CANDY_VAL)
+            return self.last_tail
+
         self.last_tail = self.position[-1]
         head = utils.add(self.position[0], direction)
         self.position = [head] + self.position[:-1]
+        return None
+
 
     def size(self):
         return len(self.position)
@@ -37,8 +62,18 @@ class Snake:
     def addPoints(self, val):
         self.points += val
         # check if size increases
-        if val == CANDY_BONUS or (self.points % CANDY_BONUS == 0):
+        if self.points / CANDY_BONUS > self.size:
             self.position.append(self.last_tail)
+            self.size += 1
+
+    def removePoints(self, val):
+        self.points -= val
+        # check if size decreases
+        if self.points / CANDY_BONUS < self.size:
+            self.last_tail = self.position[-1]
+            del self.position[-1]
+            self.size -= 1
+
 
 
 class State:
@@ -111,19 +146,43 @@ class State:
         self.iter += 1
 
         # update positions
-        for id, m in moves.iteritems():
-            self.snakes[id].move(m)
+        candies_to_add = []
+        accelerated = {}
+        for id, (dir, norm) in moves.iteritems():
+            new_candy_pos = self.snakes[id].move(dir, norm)
+
+            # We remember where to add candies when the snake accelerated
+            if new_candy_pos is not None:
+               candies_to_add.append(new_candy_pos)
+
+            # We collect candies if head touches a candy
             head = self.snakes[id].position[0]
             if head in self.candies:
                 self.snakes[id].addPoints(self.candies.get(head))
                 del self.candies[head]
+
+            # If the snake accelerated, we check if the second part of the body touches a candy
+            if norm == 2:
+                accelerated[id] = True
+                second = self.snakes[id].position[1]
+                if second in self.candies:
+                    self.snakes[id].addPoints(self.candies.get(second))
+                    del self.candies[second]
+            else:
+                accelerated[id] = False
+
+        # add candies created by acceleration
+        for cand_pos in candies_to_add:
+            self.addCandy(cand_pos, CANDY_VAL)
 
         # remove snakes which bumped into other snakes
         deads = []
         for id in self.snakes.keys():
             # list of (x,y) points occupied by other snakes
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
-            if self.snakes[id].position[0] in otherSnakes or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size):
+            if self.snakes[id].position[0] in otherSnakes\
+                    or (accelerated[id] and self.snakes[id].position[1] in otherSnakes)\
+                    or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size):
                 deads.append(id)
                 # add candies on the snake position before last move
                 for p in self.snakes[id].position:
@@ -179,7 +238,19 @@ class Game:
         """
         snake = state.snakes.get(player)
         head = snake.position[0]
-        return [m for m in MOVES if m != utils.mult(snake.orientation(), -1) and utils.isOnGrid(utils.add(head, m), self.grid_size)]
+        return [(m,n) for m in MOVES for n in NORM_MOVES
+                if m != utils.mult(snake.orientation(), -1)
+                and (n == 1 or snake.size > 2)
+                and utils.isOnGrid(utils.add(head, m, mu=n), self.grid_size)]
+
+    def simple_actions(self, state, player):
+        """
+        List of possible actions for `player`.
+        """
+        snake = state.snakes.get(player)
+        head = snake.position[0]
+        return [(m,1) for m in MOVES if m != utils.mult(snake.orientation(), -1)
+                and utils.isOnGrid(utils.add(head, m), self.grid_size)]
 
     def succ(self, state, actions):
         """
