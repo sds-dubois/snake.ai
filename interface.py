@@ -56,7 +56,7 @@ class Snake:
 
         if move.norm() == 2 and 2 in possibleNorm:
             # We can only accelerate when the snake is big enough
-            if snake.size <= 2:
+            if self.size <= 2:
                 return False
 
             # We make sure that we can move without causing death at the next time

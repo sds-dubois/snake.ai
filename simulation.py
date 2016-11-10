@@ -25,12 +25,12 @@ if __name__ ==  "__main__":
     if len(sys.argv) > 1:
         n_simul = int(sys.argv[1])
     else:
-        n_simul = 100
+        n_simul = 200
 
     strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
     results, iterations = simulate(n_simul, strategies, 20, max_iter = MAX_ITER)
 
-    print "=======Results======="
+    print "\n\n=======Results======="
     print "Run {} simulations".format(n_simul)
     print "Max iteration:", MAX_ITER, "\n"
     for i in range(len(strategies)):

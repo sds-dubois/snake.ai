@@ -32,4 +32,5 @@ if __name__ ==  "__main__":
     else:
         max_iter = None
     #controller([randomStrategy, greedyStrategy, smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)
-    controller([smartGreedyStrategy, smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)
+    controller([smartGreedyStrategy, smartGreedyStrategy,
+                smartGreedyStrategy,smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)

@@ -22,8 +22,10 @@ def greedyStrategy(id, state, game):
     """
     actions = game.simple_actions(state, id)
     head = state.snakes[id].position[0]
-    if len(state.candies) == 0:
+    if len(actions) == 0:
         return None
+    if len(state.candies) == 0:
+        return random.sample(actions, 1)[0]
     best_move = min((dist(move.apply(head), candy), move)
                     for candy in state.candies.keys() for move in actions)
     return best_move[1]
