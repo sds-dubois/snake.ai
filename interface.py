@@ -16,7 +16,7 @@ if ACCELERATION:
     NORM_MOVES.append(2)                    # acceleration moves
 MOVES = [Move(dir, norm) for dir in DIRECTIONS for norm in NORM_MOVES]
 CANDY_VAL = 1                               # default candy value
-CANDY_BONUS = 2                             # candy value for dead snakes
+CANDY_BONUS = 3                             # candy value for dead snakes
 
 
 class Snake:
@@ -29,6 +29,7 @@ class Snake:
         self.points = 2*CANDY_BONUS
         self.size = 2
         self.last_tail = None
+        self.on_tail = False
 
     def predictHead(self, move):
         return move.apply(self.position[0])
@@ -41,17 +42,22 @@ class Snake:
         :return: None if the snake didn't accelerate, the position to put a candy on, if it did accelerate
         '''
         norm, direction = move.norm(), move.direction()
+        self.on_tail = False
         if norm == 2:
             self.last_tail = self.position[-2]
             second = utils.add(self.position[0], direction)
             head = utils.add(second, direction)
             self.position = [head, second] + self.position[:-2]
             self.removePoints(CANDY_VAL)
+            if head in self.position[1:]:
+                self.on_tail = True
             return self.last_tail
 
         self.last_tail = self.position[-1]
         head = utils.add(self.position[0], direction)
         self.position = [head] + self.position[:-1]
+        if head in self.position[1:]:
+                self.on_tail = True
         return None
 
 
@@ -105,8 +111,11 @@ class State:
         for id, s in self.snakes.iteritems():
             if (i,j) == s.position[0]:
                 return '@'
-            if (i,j) in s.position[1:]:
+            c = s.position[1:].count((i,j))
+            if c == 1:
                 return str(id)
+            if c == 2:
+                return "#"
         return ' '
 
     def printGrid(self, grid_size):
@@ -240,8 +249,12 @@ class Game:
         head = snake.position[0]
         return [m for m in MOVES
                 if m.direction() != utils.mult(snake.orientation(), -1)
+                and (not snake.on_tail or m.applyDirection(head) not in snake.position[:-1])
                 and (m.norm() == 1 or snake.size > 2)
-                and utils.isOnGrid(m.apply(head), self.grid_size)]
+                and utils.isOnGrid(m.apply(head), self.grid_size)
+                and (m.norm() == 1
+                     or m.applyDirection(head) not in snake.position[:-1]
+                     or m.apply(head) not in snake.position[:-2])]
 
     def simple_actions(self, state, player):
         """
@@ -249,8 +262,8 @@ class Game:
         """
         snake = state.snakes.get(player)
         head = snake.position[0]
-        return [m for m in MOVES if
-                m.norm() == 1
+        return [m for m in MOVES if m.norm() == 1
+                and (not snake.on_tail or m.apply(head) not in snake.position[:-1])
                 and m.direction() != utils.mult(snake.orientation(), -1)
                 and utils.isOnGrid(m.apply(head), self.grid_size)]
 

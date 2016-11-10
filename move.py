@@ -19,3 +19,6 @@ class Move:
 
     def apply(self, point):
         return utils.add(point, self.direction(), mu=self.norm())
+
+    def applyDirection(self, point):
+        return utils.add(point, self.direction())
