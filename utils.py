@@ -21,14 +21,6 @@ def norm1(tuple):
     """Norm 1"""
     return dist(tuple, tuple)
 
-def norm(move):
-    '''
-    The norm of a move
-    :param move: a move
-    :return: its norm
-    '''
-    return move[1]
-
 def isOnGrid(p, grid_size):
     """
     Check if position `p` is valid for the grid.

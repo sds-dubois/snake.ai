@@ -34,6 +34,38 @@ class Snake:
     def predictHead(self, move):
         return move.apply(self.position[0])
 
+    def authorizedMove(self, move, possibleNorm=NORM_MOVES):
+        '''
+        Returns if the move is authorized given a optional direction for the collision constraints
+        :param move: the move to check
+        :param possibleNorm: check only the norm provided
+        :return: a boolean true if the position is authorized
+        '''
+        head = self.position[0]
+
+        # backward moves are forbidden
+        if move.direction() == utils.mult(self.orientation(), -1):
+            return False
+
+        # If a collision already occurred we can't do another one
+        if (self.on_tail and move.applyDirection(head) in self.position[:-1]):
+            return False
+        # If we would need two collisions in a row there is a problem
+        if (move.applyDirection(head) in self.position[:-1] and move.applyDirection(head, mu=2) in self.position[:-2]):
+            return False
+
+        if move.norm() == 2 and 2 in possibleNorm:
+            # We can only accelerate when the snake is big enough
+            if snake.size <= 2:
+                return False
+
+            # We make sure that we can move without causing death at the next time
+            if (move.applyDirection(head, mu=3) in self.position[:-3]
+                and move.applyDirection(head, mu=2) in self.position[:-2]):
+                return False
+
+        return True
+
     def move(self, move):
         '''
         Moves according the direction vectors, if it accelerates, returns the position to put a candy on
@@ -154,10 +186,17 @@ class State:
         """
         self.iter += 1
 
+        deads = []
+
         # update positions
         candies_to_add = []
         accelerated = {}
         for id, m in moves.iteritems():
+            # If the snake couldn't move, then it's dead
+            if m is None:
+                deads.append(id)
+                continue
+
             new_candy_pos = self.snakes[id].move(m)
 
             # We remember where to add candies when the snake accelerated
@@ -185,19 +224,20 @@ class State:
             self.addCandy(cand_pos, CANDY_VAL)
 
         # remove snakes which bumped into other snakes
-        deads = []
+
         for id in self.snakes.keys():
             # list of (x,y) points occupied by other snakes
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
-            if self.snakes[id].position[0] in otherSnakes\
+            if not id in deads and (self.snakes[id].position[0] in otherSnakes\
                     or (accelerated[id] and self.snakes[id].position[1] in otherSnakes)\
-                    or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size):
+                    or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size)):
                 deads.append(id)
-                # add candies on the snake position before last move
-                for p in self.snakes[id].position:
-                    self.candies[p] = CANDY_BONUS
+
 
         for id in deads:
+            # add candies on the snake position before last move
+            for p in self.snakes[id].position:
+                self.candies[p] = CANDY_BONUS
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
 
@@ -248,13 +288,8 @@ class Game:
         snake = state.snakes.get(player)
         head = snake.position[0]
         return [m for m in MOVES
-                if m.direction() != utils.mult(snake.orientation(), -1)
-                and (not snake.on_tail or m.applyDirection(head) not in snake.position[:-1])
-                and (m.norm() == 1 or snake.size > 2)
-                and utils.isOnGrid(m.apply(head), self.grid_size)
-                and (m.norm() == 1
-                     or m.applyDirection(head) not in snake.position[:-1]
-                     or m.apply(head) not in snake.position[:-2])]
+                if utils.isOnGrid(m.apply(head), self.grid_size)
+                and snake.authorizedMove(m)]
 
     def simple_actions(self, state, player):
         """
@@ -263,8 +298,7 @@ class Game:
         snake = state.snakes.get(player)
         head = snake.position[0]
         return [m for m in MOVES if m.norm() == 1
-                and (not snake.on_tail or m.apply(head) not in snake.position[:-1])
-                and m.direction() != utils.mult(snake.orientation(), -1)
+                and snake.authorizedMove(m, possibleNorm=[1])
                 and utils.isOnGrid(m.apply(head), self.grid_size)]
 
     def succ(self, state, actions):

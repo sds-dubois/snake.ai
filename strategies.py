@@ -9,7 +9,10 @@ def randomStrategy(id, state, game):
     """
     Takes random actions
     """
-    return random.sample(game.actions(state, id), 1)[0]
+    actions = game.actions(state, id)
+    if len(actions) == 0:
+        return None
+    return random.sample(actions, 1)[0]
 
 
 def greedyStrategy(id, state, game):
@@ -20,7 +23,7 @@ def greedyStrategy(id, state, game):
     actions = game.simple_actions(state, id)
     head = state.snakes[id].position[0]
     if len(state.candies) == 0:
-        return random.sample(actions, 1)[0]
+        return None
     best_move = min((dist(move.apply(head), candy), move)
                     for candy in state.candies.keys() for move in actions)
     return best_move[1]
@@ -38,7 +41,7 @@ def smartGreedyStrategy(id, state, game):
 
     # If it is empty, then the snake will die and we move randomly
     if len(actions) == 0:
-        return random.sample(game.simple_actions(state, id), 1)[0]
+        return None
 
     # If there is no candy we move randomly
     if len(state.candies) == 0:
@@ -60,7 +63,7 @@ def opportunistStrategy(id, state, game):
 
     # If it is empty, then the snake will die and we move randomly
     if len(actions) == 0:
-        return random.sample(game.simple_actions(state, id), 1)[0]
+        return None
 
     # If there is no candy we move randomly
     if len(state.candies) == 0:
