@@ -3,6 +3,7 @@ from time import sleep
 import numpy as np
 from controller import controller
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
+from rl import rl_strategy, simpleFeatureExtractor
 from utils import progressBar
 
 
@@ -27,7 +28,9 @@ if __name__ ==  "__main__":
     else:
         n_simul = 200
 
-    strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
+    rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy], simpleFeatureExtractor, 20, num_trials=500, max_iter=3000)
+    # strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
+    strategies = [randomStrategy, smartGreedyStrategy, rlStrategy]
     results, iterations = simulate(n_simul, strategies, 20, max_iter = MAX_ITER)
 
     print "\n\n=======Results======="
