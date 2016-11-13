@@ -69,6 +69,14 @@ def simpleFeatureExtractor(state, action, id):
     features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
     return features
 
+def simpleFeatureExtractor2(state, action, id):
+    head = state.snakes[id].position[0]
+    features = [(('candy', utils.add(head, c, mu = -1), v), 1.) for c,v in state.candies.iteritems()]
+    features += [(('adv-head', utils.add(head, s.position[0], mu = -1), v), 1.) for k,s in state.snakes.iteritems() if k != id]
+    features += [(('adv-tail', utils.add(head, t, mu = -1), v), 1.) for k,s in state.snakes.iteritems() for t in s.position[1:] if k != id and utils.dist(head, t) < 5]
+    features += [(('my-tail', utils.add(head, t, mu = -1), v), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 5]
+    features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
+    return features
 
 ############################################################
 
@@ -106,6 +114,7 @@ def train(rl, strategies, grid_size, candy_ratio = 1., num_trials=100, max_iter=
         totalRewards.append(totalReward)
 
     progressBar(num_trials, num_trials)
+    print "Average reward:", sum(totalRewards)/num_trials
     return totalRewards
 
 def rl_strategy(strategies, featureExtractor, grid_size, candy_ratio = 1., num_trials=100, max_iter=1000, verbose=False):

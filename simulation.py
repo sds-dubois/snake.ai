@@ -3,11 +3,12 @@ from time import sleep
 import numpy as np
 from controller import controller
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
-from rl import rl_strategy, simpleFeatureExtractor
+from rl import rl_strategy, simpleFeatureExtractor, simpleFeatureExtractor2
 from utils import progressBar
 
 
 def simulate(n_simul, strategies, grid_size, candy_ratio = 1., max_iter = 500):
+    print "Simulations"
     results = dict((id, 0.) for id in xrange(len(strategies)))
     iterations = []
     for it in xrange(n_simul):
@@ -28,10 +29,11 @@ if __name__ ==  "__main__":
     else:
         n_simul = 200
 
-    rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy], simpleFeatureExtractor, 20, num_trials=500, max_iter=3000)
+    rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor2, 20, num_trials=5000, max_iter=3000)
     # strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
-    strategies = [randomStrategy, smartGreedyStrategy, rlStrategy]
+    strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
     results, iterations = simulate(n_simul, strategies, 20, max_iter = MAX_ITER)
+
 
     print "\n\n=======Results======="
     print "Run {} simulations".format(n_simul)
