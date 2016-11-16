@@ -3,9 +3,9 @@ Interface for the multi player snake game
 """
 
 # imports
+import random, math
 import utils
-import random
-import math
+from copy import deepcopy
 from move import Move
 
 # global variables
@@ -311,13 +311,18 @@ class Game:
                 and snake.authorizedMove(m, possibleNorm=[1])
                 and utils.isOnGrid(m.apply(head), self.grid_size)]
 
-    def succ(self, state, actions):
+    def succ(self, state, actions, copy = True):
         """
         `actions` is a dict {snake_id => move}
         Update snakes' position and randomly add some candies.
         """
-        state = state.update(actions)
+        if copy:
+            newState = deepcopy(state)
+        else:
+            newState = state
+        
+        newState.update(actions)
         rand_pos = (random.randint(1, self.grid_size-1), random.randint(1, self.grid_size-1))
-        state.addCandy(rand_pos, CANDY_VAL)
-        return state
+        newState.addCandy(rand_pos, CANDY_VAL)
+        return newState
 
