@@ -2,10 +2,11 @@
 Reinforcement learning
 """
 
-import random, math
+import random, math, pickle
 import interface, utils
 from collections import defaultdict
 from utils import progressBar
+from copy import deepcopy
 
 class QLearningAlgorithm:
     def __init__(self, actions, discount, featureExtractor, explorationProb=0.2):
@@ -62,20 +63,28 @@ class QLearningAlgorithm:
 
 ############################################################
 
-def simpleFeatureExtractor(state, action, id):
+def simpleFeatureExtractor0(state, action, id):
     head = state.snakes[id].position[0]
-    features = [(('candy', utils.add(head, c, mu = -1), v), 1.) for c,v in state.candies.iteritems()]
-    features += [(('adv', utils.add(head, s.position[0], mu = -1), v), 1.) for k,s in state.snakes.iteritems() if k != id]
-    features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
+    features = [(('candy', utils.add(head, c, mu = -1), v, action.dir, action.n), 1.) for c,v in state.candies.iteritems()]
+    features += [(('adv', utils.add(head, s.position[0], mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() if k != id]
+    features += [(('x', head[0], action.dir, action.n), 1.), (('y', head[1], action.dir, action.n), 1.)]
+    return features
+
+def simpleFeatureExtractor1(state, action, id):
+    head = state.snakes[id].position[0]
+    features = [(('candy', utils.add(head, c, mu = -1), action.dir, action.n), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 4]
+    features += [(('adv', utils.add(head, t, mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 4]
+    features += [(('my-tail', utils.add(head, t, mu = -1), action.dir, action.n), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 4]
+    features += [(('x', head[0], action.dir, action.n), 1.), (('y', head[1], action.dir, action.n), 1.)]
     return features
 
 def simpleFeatureExtractor2(state, action, id):
     head = state.snakes[id].position[0]
-    features = [(('candy', utils.add(head, c, mu = -1), v), 1.) for c,v in state.candies.iteritems()]
-    features += [(('adv-head', utils.add(head, s.position[0], mu = -1), v), 1.) for k,s in state.snakes.iteritems() if k != id]
-    features += [(('adv-tail', utils.add(head, t, mu = -1), v), 1.) for k,s in state.snakes.iteritems() for t in s.position[1:] if k != id and utils.dist(head, t) < 5]
-    features += [(('my-tail', utils.add(head, t, mu = -1), v), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 5]
-    features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
+    features = [(('candy', utils.add(head, c, mu = -1), v, action.dir, action.n), 1.) for c,v in state.candies.iteritems()]
+    features += [(('adv-head', utils.add(head, s.position[0], mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() if k != id and utils.dist(head, s.position[0]) < 7]
+    features += [(('adv-tail', utils.add(head, t, mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() for t in s.position[1:] if k != id and utils.dist(head, t) < 7]
+    features += [(('my-tail', utils.add(head, t, mu = -1), action.dir, action.n), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 7]
+    features += [(('x', head[0], action.dir, action.n), 1.), (('y', head[1], action.dir, action.n), 1.)]
     return features
 
 ############################################################
@@ -99,11 +108,16 @@ def train(rl, strategies, grid_size, candy_ratio = 1., num_trials=100, max_iter=
 
             newState = game.succ(state, actions)
             if rl_id in newState.snakes:
-                reward = newState.snakes[rl_id].points - points
+                if len(newState.snakes) == 1: # it won
+                    reward = 2.0 * newState.snakes[rl_id].points
+                else:
+                    reward = newState.snakes[rl_id].points - points
+
                 points = newState.snakes[rl_id].points
                 rl.incorporateFeedback(state, action, reward, newState)
-            else:
-                rl.incorporateFeedback(state, action, 0, None)
+            else: # it died
+                reward = - points
+                rl.incorporateFeedback(state, action, reward, None)
 
             totalReward += totalDiscount * reward
             totalDiscount *= rl.discount
@@ -117,12 +131,29 @@ def train(rl, strategies, grid_size, candy_ratio = 1., num_trials=100, max_iter=
     print "Average reward:", sum(totalRewards)/num_trials
     return totalRewards
 
-def rl_strategy(strategies, featureExtractor, grid_size, candy_ratio = 1., num_trials=100, max_iter=1000, verbose=False):
+def rl_strategy(strategies, featureExtractor, grid_size, candy_ratio = 1., num_trials=100, max_iter=1000, filename = "weights.p", verbose=False):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
-    features = lambda s,a : simpleFeatureExtractor(s, a, rl_id)
-    rl = QLearningAlgorithm(actions, discount = 1.0, featureExtractor = features, explorationProb = 0.2)
+    features = lambda s,a : featureExtractor(s, a, rl_id)
+    rl = QLearningAlgorithm(actions, discount = 1.0, featureExtractor = features, explorationProb = 0.3)
     train(rl, strategies, grid_size, num_trials=num_trials, max_iter=max_iter, verbose=verbose)
     rl.explorationProb = 0
+    strategy = lambda id,s,g : rl.getAction(s)
+
+    # save learned weights
+    with open(filename, "wb") as fout:
+        weights = dict(rl.weights)
+        pickle.dump(weights, fout)
+    
+    return strategy
+
+def load_rl_strategy(filename, strategies, featureExtractor):
+    rl_id = len(strategies)
+    actions = lambda s : s.simple_actions(rl_id)
+    features = lambda s,a : featureExtractor(s, a, rl_id)
+    rl = QLearningAlgorithm(actions, discount = 1.0, featureExtractor = features, explorationProb = 0)
+    with open(filename, "rb") as fin:
+        weights = pickle.load(fin)
+    rl.weights = weights
     strategy = lambda id,s,g : rl.getAction(s)
     return strategy

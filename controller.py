@@ -1,6 +1,7 @@
 import sys
 from interface import Game
-from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy
+from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
+from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 1):
     game = Game(grid_size, len(strategies), candy_ratio = candy_ratio, max_iter = max_iter)
@@ -18,7 +19,7 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
             print actions
 
         # Update the state
-        state = game.succ(state, actions)
+        state = game.succ(state, actions, copy = False)
 
     if verbose > 0:
         state.printGrid(game.grid_size)
@@ -31,6 +32,8 @@ if __name__ ==  "__main__":
         max_iter = int(sys.argv[1])
     else:
         max_iter = None
-    #controller([randomStrategy, greedyStrategy, smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)
-    controller([smartGreedyStrategy, smartGreedyStrategy,
-                smartGreedyStrategy,smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)
+    # controller([smartGreedyStrategy, smartGreedyStrategy, smartGreedyStrategy,smartGreedyStrategy], 20, max_iter = max_iter, verbose = 1)
+
+    rlStrategy = load_rl_strategy("weights.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
+    strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
+    controller(strategies, 20, max_iter = max_iter, verbose = 1)
