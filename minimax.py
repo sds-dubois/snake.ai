@@ -51,20 +51,30 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     """
     def vMinMax(state, depth, agent):
-      if state.isWin(agent) or state.isLose(agent) or state.isDraw() or state.timesUp() \
-              or len(state.actions(agent)) == 0:
-        return state.getScore(agent)
+      if state.isWin(mm_agent) or state.isLose(mm_agent) or state.isDraw() or state.timesUp():
+        return state.getScore(mm_agent), None
+      if len(state.actions(agent)) == 0 and agent == mm_agent:
+        return state.getScore(mm_agent)
+      if len(state.actions(agent)) == 0:
+        return vMinMax(state, depth, state.getNextAgent(agent))
       if depth == 0:
-        return self.evaluationFunction(state, agent)
+        return self.evaluationFunction(state, agent), None
       if agent == mm_agent:
-        return max(vMinMax(state.generateSuccessor(agent, action), depth-1, state.getNextAgent(agent))
+        return max((vMinMax(state.generateSuccessor(agent, action), depth-1, state.getNextAgent(agent))[0], action)
                    for action in state.actions(agent))
       return min(vMinMax(state.generateSuccessor(agent, action), depth, agent+1)
                    for action in state.actions(agent))
     v = []
+
     agent = gameState.getNextAgent(mm_agent)
+    while(len(gameState.actions(agent)) == 0 and agent != mm_agent):
+      agent = gameState.getNextAgent(agent)
+
+    if agent == mm_agent:
+      return random.sample(gameState.actions(mm_agent), 1)[0]
+
     for action in gameState.actions(agent):
-      v.append((vMinMax(gameState.generateSuccessor(agent, action), self.depth, 1), action))
+      v.append(vMinMax(gameState.generateSuccessor(agent, action), self.depth, 1))
     v_max = max(v)[0]
     return random.sample([a for d, a in v if d == v_max], 1)[0]
 

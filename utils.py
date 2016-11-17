@@ -27,7 +27,7 @@ def isOnGrid(p, grid_size):
     """
     return p[0] > 0 and p[1] > 0 and p[0] < grid_size and p[1] < grid_size
 
-def progressBar(iteration, n_total, size=25):
+def progressBar(iteration, n_total, size=50):
     if iteration % (n_total/size) == 0:
         sys.stdout.write('\r')
         i = iteration*size/n_total
