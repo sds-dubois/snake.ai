@@ -184,16 +184,6 @@ class State:
             ):
                 n -= 1
 
-    def simple_actions(self, player):
-        """
-        List of possible actions for `player`.
-        """
-        snake = self.snakes.get(player)
-        head = snake.position[0]
-        return [m for m in MOVES if m.norm() == 1
-                and snake.authorizedMove(m, possibleNorm=[1])
-                and utils.isOnGrid(m.apply(head), self.grid_size)]
-
     def update(self, moves):
         """
         `moves` is a dict {snake_id => move}
