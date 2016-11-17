@@ -17,6 +17,10 @@ def dist(tuple1, tuple2):
     """Manhattan distance"""
     return abs(tuple1[0] - tuple2[0]) + abs(tuple1[1] - tuple2[1])
 
+def norm1(tuple):
+    """Norm 1"""
+    return dist(tuple, tuple)
+
 def isOnGrid(p, grid_size):
     """
     Check if position `p` is valid for the grid.
@@ -29,3 +33,5 @@ def progressBar(iteration, n_total, size=25):
         i = iteration*size/n_total
         sys.stdout.write("[{}{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
         sys.stdout.flush()
+    if iteration == n_total:
+        print ""
