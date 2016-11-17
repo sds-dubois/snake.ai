@@ -1,3 +1,5 @@
+import sys
+
 """
 Utils
 """
@@ -15,3 +17,21 @@ def dist(tuple1, tuple2):
     """Manhattan distance"""
     return abs(tuple1[0] - tuple2[0]) + abs(tuple1[1] - tuple2[1])
 
+def norm1(tuple):
+    """Norm 1"""
+    return dist(tuple, tuple)
+
+def isOnGrid(p, grid_size):
+    """
+    Check if position `p` is valid for the grid.
+    """
+    return p[0] > 0 and p[1] > 0 and p[0] < grid_size and p[1] < grid_size
+
+def progressBar(iteration, n_total, size=25):
+    if iteration % (n_total/size) == 0:
+        sys.stdout.write('\r')
+        i = iteration*size/n_total
+        sys.stdout.write("[{}{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
+        sys.stdout.flush()
+    if iteration == n_total:
+        print ""
