@@ -1,5 +1,3 @@
-__author__ = 'The Real Seb'
-
 import utils
 
 class Move:
