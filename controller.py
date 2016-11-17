@@ -1,7 +1,7 @@
 import sys
 from interface import Game
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
-from minimax import MinimaxAgent, AlphaBetaAgent, greedyEvaluationFunction
+from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 1):
@@ -34,9 +34,10 @@ if __name__ ==  "__main__":
     else:
         max_iter = None
 
-    minimax_agent = MinimaxAgent(depth=2)
+    minimax_agent = MinimaxAgent(depth=2, evalFn= greedyEvaluationFunction)
     alphabeta_agent = AlphaBetaAgent(depth=1, evalFn= greedyEvaluationFunction)
-    controller([randomStrategy, opportunistStrategy, alphabeta_agent.getAction],
+    expectimax_agent = ExpectimaxAgent(depth=2, evalFn=greedyEvaluationFunction)
+    controller([randomStrategy, opportunistStrategy, expectimax_agent.getAction],
                20, max_iter = max_iter, verbose = 1)
 
     #rlStrategy = load_rl_strategy("weights.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)

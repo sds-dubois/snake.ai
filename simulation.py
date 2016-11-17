@@ -37,7 +37,7 @@ if __name__ ==  "__main__":
     #rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1, 20, num_trials=50000, max_iter=3000, filename = "weights3.p")
     # rlStrategy = load_rl_strategy("weights3.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
     # strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
-    strategies = [opportunistStrategy, alphabeta_agent.getAction]
+    strategies = [smartGreedyStrategy, alphabeta_agent.getAction]
     wins, points, iterations = simulate(n_simul, strategies, 20, max_iter = MAX_ITER)
 
 
