@@ -138,7 +138,7 @@ def rl_strategy(strategies, featureExtractor, grid_size, candy_ratio = 1., num_t
     rl = QLearningAlgorithm(actions, discount = 1.0, featureExtractor = features, explorationProb = 0.3)
     train(rl, strategies, grid_size, num_trials=num_trials, max_iter=max_iter, verbose=verbose)
     rl.explorationProb = 0
-    strategy = lambda id,s,g : rl.getAction(s)
+    strategy = lambda id,s : rl.getAction(s)
 
     # save learned weights
     with open(filename, "wb") as fout:
@@ -155,5 +155,5 @@ def load_rl_strategy(filename, strategies, featureExtractor):
     with open(filename, "rb") as fin:
         weights = pickle.load(fin)
     rl.weights = weights
-    strategy = lambda id,s,g : rl.getAction(s)
+    strategy = lambda id,s : rl.getAction(s)
     return strategy
