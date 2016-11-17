@@ -27,6 +27,11 @@ def simpleEvaluationFunction(state, agent):
   """
   return state.getScore(agent)
 
+def greedyEvaluationFunction(state, agent):
+  return state.getScore(agent) -min(
+    float(utils.dist(state.snakes[agent].head(), candy))/(2*state.grid_size) for candy in state.candies.iterkeys()
+  )
+
 class MultiAgentSearchAgent(Agent):
   """
     This class provides some common elements to all multi-agent searchers.
@@ -51,18 +56,24 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     """
     def vMinMax(state, depth, agent):
-      if state.isWin(mm_agent) or state.isLose(mm_agent) or state.isDraw() or state.timesUp():
+      if state.isWin(mm_agent) or state.isLose(mm_agent) or state.isDraw():
+#        print "putain"
         return state.getScore(mm_agent), None
       if len(state.actions(agent)) == 0 and agent == mm_agent:
-        return state.getScore(mm_agent)
+#        print "encule"
+        return -float("inf"), None
       if len(state.actions(agent)) == 0:
+#        print "sa mere"
         return vMinMax(state, depth, state.getNextAgent(agent))
       if depth == 0:
-        return self.evaluationFunction(state, agent), None
+#        print "la hyene"
+        return self.evaluationFunction(state, mm_agent), None
       if agent == mm_agent:
+#        print "python de la fournaise"
         return max((vMinMax(state.generateSuccessor(agent, action), depth-1, state.getNextAgent(agent))[0], action)
                    for action in state.actions(agent))
-      return min(vMinMax(state.generateSuccessor(agent, action), depth, agent+1)
+#      print "Chibre a sa maman"
+      return min(vMinMax(state.generateSuccessor(agent, action), depth, state.getNextAgent(agent))
                    for action in state.actions(agent))
     v = []
 
@@ -74,9 +85,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
       return random.sample(gameState.actions(mm_agent), 1)[0]
 
     for action in gameState.actions(agent):
-      v.append(vMinMax(gameState.generateSuccessor(agent, action), self.depth, 1))
-    v_max = max(v)[0]
-    return random.sample([a for d, a in v if d == v_max], 1)[0]
+      v.append(vMinMax(gameState.generateSuccessor(agent, action), self.depth, gameState.getNextAgent(agent)))
+    v_min = min(v)[0]
+    return random.sample([a for d, a in v if d == v_min], 1)[0]
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
   """
@@ -90,37 +101,56 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     # BEGIN_YOUR_CODE (our solution is 49 lines of code, but don't worry if you deviate from this)
     def vMinMax(state, depth, agent, alpha, beta):
-      if state.isWin(agent) or state.isLose(agent) or state.isDraw() or state.timesUp() \
-              or len(state.actions(agent)) == 0:
-        return state.getScore(agent)
+      if state.isWin(mm_agent) or state.isLose(mm_agent) or state.isDraw():
+        return state.getScore(mm_agent), None
+      if len(state.actions(agent)) == 0 and agent == mm_agent:
+        return -float("inf"), None
+      if len(state.actions(agent)) == 0:
+        return vMinMax(state, depth, state.getNextAgent(agent), alpha, beta)
       if depth == 0:
-        return self.evaluationFunction(state, agent)
+        return self.evaluationFunction(state, mm_agent), None
       if agent == mm_agent:
-        v = -float("inf")
+        v = (-float("inf"),None)
         for action in state.actions(agent):
-          v = max(v,vMinMax(state.generateSuccessor(agent, action), depth-1, state.getNextAgent(agent), alpha, beta))
-          alpha = max(alpha, v)
+          vs = vMinMax(state.generateSuccessor(agent, action),
+                           depth-1, state.getNextAgent(agent), alpha, beta)
+          if (vs[0] > v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
+            v = (vs[0],action)
+          alpha = max(alpha, v[0])
           if beta <= alpha:
             break
         return v
 
-      v = float("inf")
+      v = (float("inf"), None)
       for action in state.actions(agent):
-        v = min(v, vMinMax(
+        vs = vMinMax(
           state.generateSuccessor(agent, action),
           depth, state.getNextAgent(agent),
           alpha, beta
-        ))
-        beta = min(beta, v)
+        )
+        if (vs[0] < v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
+          v = vs
+        beta = min(beta, v[0])
         if beta <= alpha:
           break
-      return  v
+      return v
     v = []
-    alpha = -float("inf")
+    beta = float("inf")
     agent = gameState.getNextAgent(mm_agent)
+    while(len(gameState.actions(agent)) == 0 and agent != mm_agent):
+      agent = gameState.getNextAgent(agent)
+
+    if agent == mm_agent:
+      if len(gameState.actions(mm_agent)) == 0:
+        return None
+      return random.sample(gameState.actions(mm_agent), 1)[0]
+
     for action in gameState.actions(agent):
-      new_v = vMinMax(gameState.generateSuccessor(agent, action), self.depth, agent, alpha, float("inf"))
-      alpha = max(alpha, new_v)
-      v.append((new_v, action))
-    v_max = max(v)[0]
-    return random.sample([a for d, a in v if d == v_max], 1)[0]
+      new_v, best_action = vMinMax(gameState.generateSuccessor(agent, action), self.depth,
+                                   gameState.getNextAgent(agent), -float("inf"), beta)
+      beta = min(beta, new_v)
+      v.append((new_v, best_action))
+    v_min =  min(v)[0]
+    if len([a for d,a in v if d == v_min and a is not None]) == 0:
+      return random.sample(gameState.actions(agent), 1)[0]
+    return random.sample([a for d, a in v if d == v_min and a is not None], 1)[0]

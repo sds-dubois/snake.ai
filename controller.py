@@ -1,7 +1,7 @@
 import sys
 from interface import Game
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
-from minimax import MinimaxAgent, AlphaBetaAgent
+from minimax import MinimaxAgent, AlphaBetaAgent, greedyEvaluationFunction
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 1):
@@ -13,7 +13,7 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
             state.printGrid(game.grid_size)
 
         # Compute the actions for each player following its strategy
-        actions = {i: strategies[i](i, state) for i in state.snakes.keys()}
+        actions = {i: strategies[i](i, state) for i in state.snakes.iterkeys()}
 
         if verbose > 1:
             print state
@@ -35,7 +35,7 @@ if __name__ ==  "__main__":
         max_iter = None
 
     minimax_agent = MinimaxAgent(depth=2)
-    alphabeta_agent = AlphaBetaAgent(depth=2)
+    alphabeta_agent = AlphaBetaAgent(depth=1, evalFn= greedyEvaluationFunction)
     controller([randomStrategy, opportunistStrategy, alphabeta_agent.getAction],
                20, max_iter = max_iter, verbose = 1)
 

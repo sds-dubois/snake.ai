@@ -9,7 +9,7 @@ from copy import deepcopy
 from move import Move
 
 # global variables
-ACCELERATION = True
+ACCELERATION = False
 DIRECTIONS = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
 NORM_MOVES = [1]
 if ACCELERATION:
@@ -30,6 +30,9 @@ class Snake:
         self.size = 2
         self.last_tail = None
         self.on_tail = False
+
+    def head(self):
+        return self.position[0]
 
     def predictHead(self, move):
         return move.apply(self.position[0])
@@ -140,24 +143,24 @@ class State:
     def shape(self, i, j):
         if (i,j) in self.candies:
             if self.candies[(i,j)] == CANDY_BONUS:
-                return '+'
-            return '*'
+                return ' +'
+            return ' *'
         for id, s in self.snakes.iteritems():
             if (i,j) == s.position[0]:
-                return '@'
+                return ' @'
             c = s.position[1:].count((i,j))
             if c == 1:
-                return str(id)
+                return ' {}'.format(id)
             if c == 2:
-                return "#"
-        return ' '
+                return " #"
+        return '  '
 
     def printGrid(self, grid_size):
         s = "--- state {} ---\n".format(self.iter)
-        s += "-" * (grid_size + 1) + '\n'
+        s += "-" * 2*(grid_size + 1) + '\n'
         for i in range(grid_size):
             s += '|' + ''.join(self.shape(i,j) for j in range(grid_size)) + '|\n'
-        s += "-" * (grid_size + 1)+ '\n'
+        s += "-" * 2*(grid_size + 1)+ '\n'
         print s
 
     def addCandy(self, pos, val):
@@ -268,7 +271,7 @@ class State:
         return self.iter == self.max_iter
 
     def getNextAgent(self, agent):
-        for i in range(self.n_snakes):
+        for i in range(1,self.n_snakes+1):
             next_snake = (agent+i) % self.n_snakes
             if next_snake in self.snakes.iterkeys():
                 return next_snake
@@ -281,7 +284,7 @@ class State:
 
     def getScore(self, agent):
         if self.isDraw():
-            return 0
+            return -1*(self.grid_size ** 2)*CANDY_BONUS+1
         if self.isWin(agent):
             return (self.grid_size ** 2)*CANDY_BONUS
         if self.timesUp():

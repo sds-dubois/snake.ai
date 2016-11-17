@@ -20,3 +20,7 @@ class Move:
 
     def applyDirection(self, point, mu=1):
         return utils.add(point, self.direction(), mu=mu)
+
+    def __repr__(self):
+        return str(self.dir)
+        #return "({}, {})".format(self.dir, self.norm)
