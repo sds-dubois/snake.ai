@@ -3,13 +3,13 @@ Interface for the multi player snake game
 """
 
 # imports
-import random, math
+import random, math, copy
 import utils
 from copy import deepcopy
 from move import Move
 
 # global variables
-ACCELERATION = True
+ACCELERATION = False
 DIRECTIONS = [(1,0), (0,1), (-1,0), (0,-1)]      # authorized moves
 NORM_MOVES = [1]
 if ACCELERATION:
@@ -30,6 +30,9 @@ class Snake:
         self.size = 2
         self.last_tail = None
         self.on_tail = False
+
+    def head(self):
+        return self.position[0]
 
     def predictHead(self, move):
         return move.apply(self.position[0])
@@ -121,6 +124,8 @@ class State:
     """
 
     grid_size = None
+    n_snakes = 0
+    max_iter = None
 
     def __init__(self, snakes, candies):
         self.snakes = snakes
@@ -138,24 +143,24 @@ class State:
     def shape(self, i, j):
         if (i,j) in self.candies:
             if self.candies[(i,j)] == CANDY_BONUS:
-                return '+'
-            return '*'
+                return ' +'
+            return ' *'
         for id, s in self.snakes.iteritems():
             if (i,j) == s.position[0]:
-                return '@'
+                return ' @'
             c = s.position[1:].count((i,j))
             if c == 1:
-                return str(id)
+                return ' {}'.format(id)
             if c == 2:
-                return "#"
-        return ' '
+                return " #"
+        return '  '
 
     def printGrid(self, grid_size):
         s = "--- state {} ---\n".format(self.iter)
-        s += "-" * (grid_size + 1) + '\n'
+        s += "-" * 2*(grid_size + 1) + '\n'
         for i in range(grid_size):
             s += '|' + ''.join(self.shape(i,j) for j in range(grid_size)) + '|\n'
-        s += "-" * (grid_size + 1)+ '\n'
+        s += "-" * 2*(grid_size + 1)+ '\n'
         print s
 
     def addCandy(self, pos, val):
@@ -235,7 +240,7 @@ class State:
 
         # remove snakes which bumped into other snakes
 
-        for id in self.snakes.keys():
+        for id in moves.keys():
             # list of (x,y) points occupied by other snakes
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
             if not id in deads and (self.snakes[id].position[0] in otherSnakes\
@@ -253,6 +258,61 @@ class State:
 
         return self
 
+    def isWin(self, agent):
+        return len(self.snakes) == 1 and agent in self.snakes.iterkeys()
+
+    def isLose(self, agent):
+        return len(self.snakes) >= 1 and agent not in self.snakes.iterkeys()
+
+    def isDraw(self):
+        return len(self.snakes) == 0
+
+    def timesUp(self):
+        return self.iter == self.max_iter
+
+    def getNextAgent(self, agent):
+        for i in range(1,self.n_snakes+1):
+            next_snake = (agent+i) % self.n_snakes
+            if next_snake in self.snakes.iterkeys():
+                return next_snake
+        return agent
+
+    def generateSuccessor(self, agent, move):
+        new_state = copy.deepcopy(self)
+        new_state.update({agent: move})
+        return new_state
+
+    def getScore(self, agent):
+        if self.isDraw():
+            return -1*(self.grid_size ** 2)*CANDY_BONUS+1
+        if self.isWin(agent):
+            return (self.grid_size ** 2)*CANDY_BONUS
+        if self.timesUp():
+            return self.snakes[agent].points
+        if self.isLose(agent) or len(self.actions(agent)) == 0:
+            return -1*(self.grid_size ** 2)*CANDY_BONUS
+        return self.snakes[agent].points
+
+    def actions(self, player):
+        """
+        List of possible actions for `player`.
+        """
+        snake = self.snakes.get(player)
+        head = snake.position[0]
+        return [m for m in MOVES
+                if utils.isOnGrid(m.apply(head), self.grid_size)
+                and snake.authorizedMove(m)]
+
+    def simple_actions(self, player):
+        """
+        List of possible actions for `player`.
+        """
+        snake = self.snakes.get(player)
+        head = snake.position[0]
+        return [m for m in MOVES if m.norm() == 1
+                and snake.authorizedMove(m, possibleNorm=[1])
+                and utils.isOnGrid(m.apply(head), self.grid_size)]
+
 
 class Game:
     def __init__(self, grid_size, n_snakes = 2, candy_ratio = 1., max_iter = None):
@@ -260,7 +320,11 @@ class Game:
         self.max_iter = max_iter
         self.n_snakes = n_snakes
         self.candy_ratio = candy_ratio
+
+        # Update static variables of State
         State.grid_size = grid_size
+        State.n_snakes = n_snakes
+        State.max_iter = max_iter
 
     def startState(self):
         """
@@ -291,25 +355,6 @@ class Game:
         else:
             return len(state.snakes) <= 1
 
-    def actions(self, state, player):
-        """
-        List of possible actions for `player`.
-        """
-        snake = state.snakes.get(player)
-        head = snake.position[0]
-        return [m for m in MOVES
-                if utils.isOnGrid(m.apply(head), self.grid_size)
-                and snake.authorizedMove(m)]
-
-    def simple_actions(self, state, player):
-        """
-        List of possible actions for `player`.
-        """
-        snake = state.snakes.get(player)
-        head = snake.position[0]
-        return [m for m in MOVES if m.norm() == 1
-                and snake.authorizedMove(m, possibleNorm=[1])
-                and utils.isOnGrid(m.apply(head), self.grid_size)]
 
     def succ(self, state, actions, copy = True):
         """
