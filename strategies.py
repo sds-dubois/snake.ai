@@ -75,3 +75,6 @@ def opportunistStrategy(id, state):
     best_move = min((dist(snake.predictHead(move), candy) - min_dist[candy],
                      dist(snake.predictHead(move), candy), move) for candy in state.candies.keys() for move in actions)
     return best_move[2]
+
+def roundStrategy(id, state):
+    i = state.iter
