@@ -5,7 +5,7 @@ from controller import controller
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
 from utils import progressBar
-from minimax import AlphaBetaAgent, greedyEvaluationFunction
+from minimax import AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction
 
 
 def simulate(n_simul, strategies, grid_size, candy_ratio = 1., max_iter = 500):
@@ -33,13 +33,13 @@ if __name__ ==  "__main__":
     else:
         n_simul = 1000
 
-    # alphabeta_agent = AlphaBetaAgent(depth=1, evalFn=greedyEvaluationFunction)
-    rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1, 20, num_trials=10000, max_iter=3000, filename = "d-weights5.p")
-    # rlStrategy = load_rl_strategy("d-weights5.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
-    # rlStrategy = load_rl_strategy("d-weights3.p", [opportunistStrategy], simpleFeatureExtractor1)
 
-    strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
-
+    alphabeta_agent = AlphaBetaAgent(depth=1, evalFn=greedyEvaluationFunction)
+    expectimax_agent = ExpectimaxAgent(depth=1, evalFn=greedyEvaluationFunction)
+    #rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1, 20, num_trials=10000, max_iter=3000, filename = "d-weights5.p")
+    # rlStrategy = load_rl_strategy("weights3.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
+    # strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
+    strategies = [alphabeta_agent.getAction, expectimax_agent.getAction]
     wins, points, iterations = simulate(n_simul, strategies, 20, max_iter = MAX_ITER)
 
 

@@ -31,7 +31,7 @@ def progressBar(iteration, n_total, size=50):
     if iteration % (n_total/size) == 0:
         sys.stdout.write('\r')
         i = iteration*size/n_total
-        sys.stdout.write("[{}{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
+        sys.stdout.write("[8{}D{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
         sys.stdout.flush()
     if iteration == n_total:
         print ""
