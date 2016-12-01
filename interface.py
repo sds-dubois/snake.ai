@@ -155,7 +155,9 @@ class State:
                 return " #"
         return '  '
 
-    def printGrid(self, grid_size):
+    def printGrid(self, grid_size = None):
+        if grid_size is None:
+            grid_size = self.grid_size
         s = "--- state {} ---\n".format(self.iter)
         s += "-" * 2*(grid_size + 1) + '\n'
         for i in range(grid_size):

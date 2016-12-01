@@ -8,7 +8,7 @@ from minimax import MinimaxAgent, AlphaBetaAgent
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
 from pdb import set_trace as t
 
-def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 0, gui_active = False, game_speed = 10):
+def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 0, gui_active = False, game_speed = None):
     # Pygame Init
     pygame.init()
     clock = pygame.time.Clock()
@@ -21,7 +21,8 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
     game = Game(grid_size, len(strategies), candy_ratio = candy_ratio, max_iter = max_iter)
     state = game.startState()
     prev_action = None
-    while not (gui_active and quit_game) or ((not gui_active) and game_over):
+    game_over = False
+    while not ((gui_active and quit_game) or ((not gui_active) and game_over)):
         # Print state
         if verbose > 0:
             state.printGrid(game.grid_size)
@@ -68,8 +69,9 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
 
         # Update the state
         state = game.succ(state, actions, copy = False)
-        # Pause        
-        clock.tick(game_speed)
+        # Pause
+        if game_speed:
+            clock.tick(game_speed)
 
         # Check if game over
         game_over = game.isEnd(state)
@@ -97,7 +99,11 @@ if __name__ ==  "__main__":
     #alphabeta_agent = AlphaBetaAgent(depth=2)
     #controller([randomStrategy, opportunistStrategy, alphabeta_agent.getAction],
     #           20, max_iter = max_iter, verbose = 1)
-    #rlStrategy = load_rl_strategy("weights.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
-    
-    strategies = [humanStrategy,smartGreedyStrategy,randomStrategy,smartGreedyStrategy]
-    controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 2)
+
+    # rlStrategy = load_rl_strategy("d-weights1.p", [opportunistStrategy], simpleFeatureExtractor1)
+    rlStrategy = load_rl_strategy("d-weights5.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
+
+    # strategies = [opportunistStrategy, rlStrategy]
+    strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
+
+    controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
