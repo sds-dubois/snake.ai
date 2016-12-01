@@ -95,15 +95,15 @@ if __name__ ==  "__main__":
         max_iter = None
 
 
-    #minimax_agent = MinimaxAgent(depth=2)
-    #alphabeta_agent = AlphaBetaAgent(depth=2)
-    #controller([randomStrategy, opportunistStrategy, alphabeta_agent.getAction],
-    #           20, max_iter = max_iter, verbose = 1)
+    minimax_agent = MinimaxAgent(depth=lambda s,a: 2)
+    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: 2)
+    controller([randomStrategy, opportunistStrategy, alphabeta_agent.getAction],
+               20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
 
     # rlStrategy = load_rl_strategy("d-weights1.p", [opportunistStrategy], simpleFeatureExtractor1)
-    rlStrategy = load_rl_strategy("d-weights5.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
+    # rlStrategy = load_rl_strategy("d-weights5.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
 
     # strategies = [opportunistStrategy, rlStrategy]
-    strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
+    # strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
 
-    controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
+    # controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)

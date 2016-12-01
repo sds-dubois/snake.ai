@@ -33,6 +33,9 @@ def greedyEvaluationFunction(state, agent):
         float(utils.dist(state.snakes[agent].head(), candy))/(2*state.grid_size) for candy in state.candies.iterkeys()
     )
 
+def cowardDepthFunction(state, mm_agent):
+    return 1
+
 class MultiAgentSearchAgent(Agent):
     """
         This class provides some common elements to all multi-agent searchers.
@@ -40,7 +43,7 @@ class MultiAgentSearchAgent(Agent):
         to the MinimaxAgent, AlphaBetaAgent & ExpectimaxAgent.
     """
 
-    def __init__(self, evalFn = simpleEvaluationFunction, depth = 2):
+    def __init__(self, evalFn = simpleEvaluationFunction, depth = lambda s, a: 2):
         self.evaluationFunction = evalFn
         self.depth = depth
 
@@ -49,7 +52,7 @@ class FunmaxAgent(MultiAgentSearchAgent):
         Minimax agent: the synchronous approach is changed into an asynchronous one
     """
 
-    def __init__(self, func, evalFn = simpleEvaluationFunction, depth = 2):
+    def __init__(self, func, evalFn = simpleEvaluationFunction, depth = lambda s, a: 2):
         super(FunmaxAgent, self).__init__(evalFn=evalFn, depth=depth)
         self.func = func
 
@@ -81,6 +84,9 @@ class FunmaxAgent(MultiAgentSearchAgent):
                                      for action in state.actions(agent))
         v = []
 
+        if self.depth(gameState, mm_agent) <= 0:
+            return self.evaluationFunction(gameState, mm_agent)
+
         agent = gameState.getNextAgent(mm_agent)
         while(len(gameState.actions(agent)) == 0 and agent != mm_agent):
             agent = gameState.getNextAgent(agent)
@@ -89,13 +95,15 @@ class FunmaxAgent(MultiAgentSearchAgent):
             return random.sample(gameState.actions(mm_agent), 1)[0]
 
         for action in gameState.actions(agent):
-            v.append(vMinMax(gameState.generateSuccessor(agent, action), self.depth, gameState.getNextAgent(agent)))
+            v.append(vMinMax(gameState.generateSuccessor(agent, action),
+                             self.depth(gameState, mm_agent), gameState.getNextAgent(agent)))
         v_min = min(v)[0]
         return random.sample([a for d, a in v if d == v_min], 1)[0]
     
 class MinimaxAgent(FunmaxAgent):
-    def __init__(self, evalFn = simpleEvaluationFunction, depth = 2):
+    def __init__(self, evalFn = simpleEvaluationFunction, depth = lambda s: 2):
         super(MinimaxAgent, self).__init__(min, evalFn=evalFn, depth=depth)
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     def getAction(self, mm_agent, gameState):
@@ -130,7 +138,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
         for action in gameState.actions(mm_agent):
             v.append((vMinMax(gameState.generateSuccessor(mm_agent, action),
-                             self.depth, gameState.getNextAgent(mm_agent)), action))
+                             self.depth(gameState, mm_agent), gameState.getNextAgent(mm_agent)), action))
         v_max = max(v)[0]
         return random.sample([a for d, a in v if d == v_max], 1)[0]
 
@@ -180,6 +188,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 if beta <= alpha:
                     break
             return v
+
+        if self.depth(gameState, mm_agent) <= 0:
+            return self.evaluationFunction(gameState, mm_agent)
+
         v = []
         beta = float("inf")
         agent = gameState.getNextAgent(mm_agent)
@@ -192,7 +204,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return random.sample(gameState.actions(mm_agent), 1)[0]
 
         for action in gameState.actions(agent):
-            new_v, best_action = vMinMax(gameState.generateSuccessor(agent, action), self.depth,
+            new_v, best_action = vMinMax(gameState.generateSuccessor(agent, action), self.depth(gameState, mm_agent),
                                                                      gameState.getNextAgent(agent), -float("inf"), beta)
             beta = min(beta, new_v)
             v.append((new_v, best_action))
@@ -200,3 +212,4 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         if len([a for d,a in v if d == v_min and a is not None]) == 0:
             return random.sample(gameState.actions(agent), 1)[0]
         return random.sample([a for d, a in v if d == v_min and a is not None], 1)[0]
+
