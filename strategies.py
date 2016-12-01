@@ -76,5 +76,10 @@ def opportunistStrategy(id, state):
                      dist(snake.predictHead(move), candy), move) for candy in state.candies.keys() for move in actions)
     return best_move[2]
 
+
+def humanStrategy():
+    chibre = True
+
 def roundStrategy(id, state):
     i = state.iter
+

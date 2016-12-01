@@ -33,9 +33,10 @@ if __name__ ==  "__main__":
     else:
         n_simul = 1000
 
+
     alphabeta_agent = AlphaBetaAgent(depth=1, evalFn=greedyEvaluationFunction)
     expectimax_agent = ExpectimaxAgent(depth=1, evalFn=greedyEvaluationFunction)
-    #rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1, 20, num_trials=50000, max_iter=3000, filename = "weights3.p")
+    #rlStrategy = rl_strategy([randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1, 20, num_trials=10000, max_iter=3000, filename = "d-weights5.p")
     # rlStrategy = load_rl_strategy("weights3.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
     # strategies = [randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy]
     strategies = [alphabeta_agent.getAction, expectimax_agent.getAction]

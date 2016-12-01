@@ -155,7 +155,9 @@ class State:
                 return " #"
         return '  '
 
-    def printGrid(self, grid_size):
+    def printGrid(self, grid_size = None):
+        if grid_size is None:
+            grid_size = self.grid_size
         s = "--- state {} ---\n".format(self.iter)
         s += "-" * 2*(grid_size + 1) + '\n'
         for i in range(grid_size):
@@ -183,16 +185,6 @@ class State:
                     CANDY_VAL
             ):
                 n -= 1
-
-    def simple_actions(self, player):
-        """
-        List of possible actions for `player`.
-        """
-        snake = self.snakes.get(player)
-        head = snake.position[0]
-        return [m for m in MOVES if m.norm() == 1
-                and snake.authorizedMove(m, possibleNorm=[1])
-                and utils.isOnGrid(m.apply(head), self.grid_size)]
 
     def update(self, moves):
         """
