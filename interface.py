@@ -320,13 +320,6 @@ class Game:
         State.n_snakes = n_snakes
         State.max_iter = max_iter
 
-#    def isEnd(self, state):
-#        if self.max_iter:
-#            return len(state.n_snakes) == 1 or state.iter == self.max_iter
-#        else:
-#            return len(state.snakes) == 1
-
-
     def startState(self):
         """
         Initialize a game with `n_snakes` snakes of size 2, randomly assigned to different locations of the grid,
