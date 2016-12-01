@@ -165,6 +165,7 @@ class State:
         s += "-" * 2*(grid_size + 1)+ '\n'
         print s
 
+
     def addCandy(self, pos, val):
         """
         Adds a candy of value val and position pos. If there is already a snake at the position, we don't add it
@@ -313,10 +314,18 @@ class Game:
         self.n_snakes = n_snakes
         self.candy_ratio = candy_ratio
 
+
         # Update static variables of State
         State.grid_size = grid_size
         State.n_snakes = n_snakes
         State.max_iter = max_iter
+
+#    def isEnd(self, state):
+#        if self.max_iter:
+#            return len(state.n_snakes) == 1 or state.iter == self.max_iter
+#        else:
+#            return len(state.snakes) == 1
+
 
     def startState(self):
         """
@@ -324,9 +333,11 @@ class Game:
         and `n_candies` candies, randomly located over the grid.
         Guarantees a valid state.
         """
+
         n_squares_per_row = int(math.ceil(math.sqrt(self.n_snakes))**2)
         square_size = self.grid_size / int(n_squares_per_row)
         assignment = random.sample(range(n_squares_per_row ** 2), self.n_snakes)
+
 
         assert self.grid_size >= 3*n_squares_per_row
 
