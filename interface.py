@@ -5,8 +5,11 @@ Interface for the multi player snake game
 # imports
 import random, math, copy
 import utils
+import numpy as np
+from collections import deque
 from copy import deepcopy
 from move import Move
+
 
 # global variables
 ACCELERATION = False
@@ -18,6 +21,133 @@ MOVES = [Move(dir, norm) for dir in DIRECTIONS for norm in NORM_MOVES]
 CANDY_VAL = 1                               # default candy value
 CANDY_BONUS = 3                             # candy value for dead snakes
 
+class newSnake:
+    grid_size = None
+
+    def __init__(self, position):
+        self.position = deque(position)
+        self.points = len(position)*CANDY_BONUS
+        self.on_tail = False
+        self.last_tail = None
+        self.bool_pos = np.zeros((self.grid_size, self.grid_size))
+        for pos in position:
+            self.bool_pos[pos] = 1
+
+    def head(self):
+        return self.position[0]
+
+    def predictHead(self, move):
+        return move.apply(self.head())
+
+    def onSnake(self, pos):
+        return self.bool_pos[pos] > 0
+
+    def onSnakeOrNotGrid(self, pos):
+        return not utils.isOnGrid(pos, self.grid_size) or self.onSnake(pos)
+
+    def countSnake(self, pos):
+        return self.bool_pos[pos]
+
+    def pop(self):
+        tail = self.position.pop()
+        self.bool_pos[tail] -= 1
+        self.last_tail = tail
+        return tail
+
+    def add(self, pos):
+        self.bool_pos[pos] += 1
+        self.position.appendleft(pos)
+
+    def addRight(self, pos):
+        self.bool_pos[pos] += 1
+        self.position.append(pos)
+
+    def authorizedMove(self, move, possibleNorm=NORM_MOVES):
+        '''
+        Returns if the move is authorized given a optional direction for the collision constraints
+        :param move: the move to check
+        :param possibleNorm: check only the norm provided
+        :return: a boolean true if the position is authorized
+        '''
+        head = self.head()
+
+        # backward moves are forbidden
+        if move.direction() == utils.mult(self.orientation(), -1):
+            return False
+
+        target = move.applyDirection(head)
+        # If a collision already occurred we can't do another one
+        if (self.on_tail and self.onSnake(target) and not self.position[-1] == target):
+            return False
+        # If we would need two collisions in a row there is a problem
+        next_target = move.applyDirection(head, mu=2)
+        if (self.onSnakeOrNotGrid(target) and not self.position[-1] == target and
+            self.onSnakeOrNotGrid(next_target) and not next_target == self.position[-2]
+            and not next_target == self.position[-1]):
+            return False
+
+        if move.norm() == 2 and 2 in possibleNorm:
+            # We can only accelerate when the snake is big enough
+            if self.size() <= 2:
+                return False
+
+            next_acc_target = move.applyDirection(head, mu=3)
+            # We make sure that we can move without causing death at the next time
+            if (self.onSnakeOrNotGrid(next_acc_target) and not next_acc_target == self.position[-3] and
+                not next_acc_target == self.position[-2] and not next_acc_target == self.position[-1] and
+                self.onSnakeOrNotGrid(next_target) and not next_target == self.position[-2]
+                and not next_target == self.position[-1]):
+                return False
+
+        return True
+
+    def move(self, move):
+        '''
+        Moves according the direction vectors, if it accelerates, returns the position to put a candy on
+        :param move: a (direction, norm) tuple with direction being the tuple encoding the direction
+        and norm being 1 for a normal move and 2 for acceleration
+        :return: None if the snake didn't accelerate, the position to put a candy on, if it did accelerate
+        '''
+        norm, direction = move.norm(), move.direction()
+        self.on_tail = False
+        if norm == 2:
+            self.pop()
+            before_last_tail = self.pop()
+            self.add(utils.add(self.position[0], direction))
+            new_head = utils.add(self.position[0], direction)
+            if self.onSnake(new_head):
+                self.on_tail = True
+            self.add(new_head)
+            self.removePoints(CANDY_VAL)
+            return before_last_tail
+
+        self.pop()
+        head = utils.add(self.position[0], direction)
+        if self.countSnake(head) == 2:
+                self.on_tail = True
+        self.add(head)
+        return None
+
+    def __len__(self):
+        return len(self.position)
+
+    def size(self):
+        return len(self)
+
+    def orientation(self):
+        return utils.add(self.position[0], self.position[1], mu = -1)
+
+    def addPoints(self, val):
+        self.points += val
+        # check if size increases
+        if self.points / CANDY_BONUS > self.size():
+            self.addRight(self.last_tail)
+
+    def removePoints(self, val):
+        self.points -= val
+        # check if size decreases
+        if self.points / CANDY_BONUS < self.size():
+            self.pop()
 
 class Snake:
     """
@@ -95,6 +225,11 @@ class Snake:
                 self.on_tail = True
         return None
 
+    def onSnake(self, pos):
+        return pos in self.position
+
+    def countSnake(self, pos):
+        return self.position.count(pos)
 
     def size(self):
         return len(self.position)
@@ -148,7 +283,7 @@ class State:
         for id, s in self.snakes.iteritems():
             if (i,j) == s.position[0]:
                 return ' @'
-            c = s.position[1:].count((i,j))
+            c = s.countSnake((i,j))
             if c == 1:
                 return ' {}'.format(id)
             if c == 2:
@@ -173,8 +308,7 @@ class State:
         :param val: the value of the candy
         :return: True if the candy has been added, False if not
         """
-        if not pos in [p for s in self.snakes.keys() for p in self.snakes[s].position] \
-                and not pos in self.candies.keys():
+        if all(not s.onSnake(pos) for s in self.snakes.itervalues()) and not pos in self.candies.keys():
             self.candies[pos] = val
             return True
         return False
@@ -182,10 +316,13 @@ class State:
     def addNRandomCandies(self, n, grid_size):
         while n > 0:
             if self.addCandy(
-                    (random.randint(0, grid_size), random.randint(0, grid_size)),
+                    (random.randint(0, grid_size-1), random.randint(0, grid_size-1)),
                     CANDY_VAL
             ):
                 n -= 1
+
+    def onOtherSnakes(self, pos, id):
+        return any(s.onSnake(pos) for i,s in self.snakes.iteritems() if i != id)
 
     def update(self, moves):
         """
@@ -212,7 +349,7 @@ class State:
                candies_to_add.append(new_candy_pos)
 
             # We collect candies if head touches a candy
-            head = self.snakes[id].position[0]
+            head = self.snakes[id].head()
             if head in self.candies:
                 self.snakes[id].addPoints(self.candies.get(head))
                 del self.candies[head]
@@ -236,8 +373,8 @@ class State:
         for id in moves.keys():
             # list of (x,y) points occupied by other snakes
             otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
-            if not id in deads and (self.snakes[id].position[0] in otherSnakes\
-                    or (accelerated[id] and self.snakes[id].position[1] in otherSnakes)\
+            if not id in deads and (self.onOtherSnakes(self.snakes[id].position[0], id)\
+                    or (accelerated[id] and self.onOtherSnakes(self.snakes[id].position[1], id))\
                     or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size)):
                 deads.append(id)
 
@@ -317,6 +454,7 @@ class Game:
 
         # Update static variables of State
         State.grid_size = grid_size
+        newSnake.grid_size = grid_size
         State.n_snakes = n_snakes
         State.max_iter = max_iter
 
@@ -338,7 +476,7 @@ class Game:
         for snake, assign in enumerate(assignment):
             head = (random.randint(1, square_size-2) + (assign / n_squares_per_row) * square_size,
                     random.randint(1, square_size-2) + (assign % n_squares_per_row) * square_size)
-            snakes[snake] = Snake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
+            snakes[snake] = newSnake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
 
         candies_to_put = 2 * int(self.candy_ratio) + 1
         start_state = State(snakes, {})
