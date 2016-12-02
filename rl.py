@@ -8,6 +8,9 @@ from collections import defaultdict
 from utils import progressBar
 from copy import deepcopy
 
+DISCOUNT = 0.9
+EXPLORATIONPROB = 0.3
+
 class QLearningAlgorithm:
     def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, weights = None):
         self.actions = actions
@@ -17,12 +20,11 @@ class QLearningAlgorithm:
         self.numIters = 0
         
         if weights:
-            with open(weights, "rb") as fin:
+            with open("data/" + weights, "rb") as fin:
                 weights_ = pickle.load(fin)
-                self.weights = weights_
+                self.weights = defaultdict(float, weights_)
         else:
             self.weights = defaultdict(float)
-
 
     def evalQ(self, state, action):
         """
@@ -110,7 +112,7 @@ class QLearningAlgorithm:
         return totalRewards
 
 
-class QLambdaLearningAlgorithm:
+class QLambdaLearningAlgorithm(QLearningAlgorithm):
     def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, lambda_ = 0.2, weights = None):
         self.actions = actions
         self.discount = discount
@@ -120,9 +122,9 @@ class QLambdaLearningAlgorithm:
         self.lambda_ = lambda_
 
         if weights:
-            with open(weights, "rb") as fin:
+            with open("data/" + weights, "rb") as fin:
                 weights_ = pickle.load(fin)
-                self.weights = weights_
+                self.weights = defaultdict(float, weights_)
         else:
             self.weights = defaultdict(float)
 
@@ -134,12 +136,17 @@ class QLambdaLearningAlgorithm:
         """
         self.numIters += 1
         if len(self.actions(state)) == 0:
-            return None
+            return None, True
         
         if random.random() < self.explorationProb:
             return random.choice(self.actions(state)), False
         else:
             return max((self.evalQ(state, action), action) for action in self.actions(state))[1], True
+
+    def updateWeights(self, state, action, delta):
+        phi = self.featureExtractor(state, action)
+        for k,v in phi:
+            self.weights[k] = self.weights[k] - self.getStepSize() * delta * v
 
     def incorporateFeedback(self, state, action, reward, newState, history = []):
         if newState is None:
@@ -160,12 +167,7 @@ class QLambdaLearningAlgorithm:
         for i in xrange(len(history)):
             s, a = history[-(i+1)] 
             delta *= self.discount * self.lambda_
-            self.incorporateFeedback(s, a, delta)
-
-    def incorporateFeedback(self, state, action, delta):
-        phi = self.featureExtractor(state, action)
-        for k,v in phi:
-            self.weights[k] = self.weights[k] - self.getStepSize() * delta * v
+            self.updateWeights(s, a, delta)
 
     def train(self, strategies, grid_size, num_trials = 100, max_iter = 1000, verbose = False):
         print "RL training"
@@ -218,13 +220,6 @@ class QLambdaLearningAlgorithm:
 
 ############################################################
 
-def simpleFeatureExtractor0(state, action, id):
-    head = state.snakes[id].position[0]
-    features = [(('candy', utils.add(head, c, mu = -1), v, action.dir, action.n), 1.) for c,v in state.candies.iteritems()]
-    features += [(('adv', utils.add(head, s.position[0], mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() if k != id]
-    features += [(('x', head[0], action.dir, action.n), 1.), (('y', head[1], action.dir, action.n), 1.)]
-    return features
-
 def simpleFeatureExtractor1(state, action, id):
     if action is None:
         dir_ = None
@@ -241,31 +236,63 @@ def simpleFeatureExtractor1(state, action, id):
     return features
 
 def simpleFeatureExtractor2(state, action, id):
+    if action is None:
+        dir_ = None
+        norm_ = None
+    else:
+        dir_ = action.direction()
+        norm_ = action.norm()
+
     head = state.snakes[id].position[0]
-    features = [(('candy', utils.add(head, c, mu = -1), v, action.dir, action.n), 1.) for c,v in state.candies.iteritems()]
-    features += [(('adv-head', utils.add(head, s.position[0], mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() if k != id and utils.dist(head, s.position[0]) < 7]
-    features += [(('adv-tail', utils.add(head, t, mu = -1), action.dir, action.n), 1.) for k,s in state.snakes.iteritems() for t in s.position[1:] if k != id and utils.dist(head, t) < 7]
-    features += [(('my-tail', utils.add(head, t, mu = -1), action.dir, action.n), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 7]
-    features += [(('x', head[0], action.dir, action.n), 1.), (('y', head[1], action.dir, action.n), 1.)]
+    features = [(('candy', utils.add(head, c, mu = -1), dir_, norm_), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
+    features += [(('adv-head', utils.add(head, s.position[0], mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() if k != id and utils.dist(head, s.position[0]) < 12]
+    features += [(('adv-tail', utils.add(head, t, mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() for t in s.position[1:] if k != id and utils.dist(head, t) < 12]
+    features += [(('my-tail', utils.add(head, t, mu = -1), dir_, norm_), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 12]
+    features += [(('x', head[0], dir_, norm_), 1.), (('y', head[1], dir_, norm_), 1.)]
     return features
+
+def projectedDistances(state, action, id):
+    if action is None:
+        return [('trapped', 1.)]
+    
+    agent = deepcopy(state.snakes[id])
+    agent.move(action)
+    head = agent.position[0]
+    features = [(('candy', utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
+    features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 12]
+    features += [(('my-tail', utils.add(head, t, mu = -1)), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 12]
+    features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
+    return features
+
 
 ############################################################
 
 
 
-def rl_strategy(strategies, featureExtractor, grid_size, num_trials=100, max_iter=1000, filename = "weights.p", verbose=False):
+def rl_strategy(strategies, featureExtractor, grid_size, lambda_ = None, num_trials = 100, max_iter=1000, filename = "weights.p", verbose = False):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
     features = lambda s,a : featureExtractor(s, a, rl_id)
-    rl = QLearningAlgorithm(actions, discount = .9, featureExtractor = features, explorationProb = 0.3)
+
+    if lambda_:
+        rl = QLambdaLearningAlgorithm(actions, discount = DISCOUNT, featureExtractor = features, lambda_ = lambda_, explorationProb = EXPLORATIONPROB)
+    else:
+        rl = QLearningAlgorithm(actions, discount = DISCOUNT, featureExtractor = features, explorationProb = EXPLORATIONPROB)
+    
     rl.train(strategies, grid_size, num_trials=num_trials, max_iter=max_iter, verbose=verbose)
     rl.explorationProb = 0
-    strategy = lambda id,s : rl.getAction(s)
+    strategy = lambda id,s : rl.getAction(s)[0]
 
     # save learned weights
-    with open(filename, "wb") as fout:
+    with open("data/" + filename, "wb") as fout:
         weights = dict(rl.weights)
         pickle.dump(weights, fout)
+    
+    with open("info/{}txt".format(filename[:-1]), "wb") as fout:
+        print >> fout, "strategies: ", [s.__name__ for s in strategies]
+        print >> fout, "features: ", featureExtractor.__name__
+        print >> fout, "grid: {}, lambda: {}, trials: {}, max_iter: {}".format(grid_size, lambda_, num_trials, max_iter)
+        print >> fout, "discount: {}, explorationProb: {}".format(DISCOUNT, EXPLORATIONPROB)
     
     return strategy
 
@@ -273,6 +300,6 @@ def load_rl_strategy(filename, strategies, featureExtractor):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
     features = lambda s,a : featureExtractor(s, a, rl_id)
-    rl = QLearningAlgorithm(actions, discount = .9, featureExtractor = features, explorationProb = 0, weights = filename)
+    rl = QLearningAlgorithm(actions, discount = DISCOUNT, featureExtractor = features, explorationProb = 0, weights = filename)
     strategy = lambda id,s : rl.getAction(s)
     return strategy
