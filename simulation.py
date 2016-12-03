@@ -33,21 +33,20 @@ if __name__ ==  "__main__":
     else:
         n_simul = 1000
 
-
+    
+    strategies = PARAMS["opponents"]
     if PARAMS["agent"] == "RL":
         if len(sys.argv) > 2 and sys.argv[1] == "load":
             rlStrategy = load_rl_strategy(PARAMS["filename"], PARAMS["opponents"],  PARAMS["featureExtractor"])
         else:
             rlStrategy = rl_strategy(PARAMS["opponents"], PARAMS["featureExtractor"], PARAMS["grid_size"], lambda_ = PARAMS["lambda_"], num_trials = PARAMS["num_trials"], max_iter = PARAMS["max_iter"], filename = PARAMS["filename"])
-        strategies = PARAMS["opponents"].append(rlStrategy)
+        strategies.append(rlStrategy)
     elif PARAMS["agent"] == "AlphaBeta":
         agent = AlphaBetaAgent(depth = PARAMS["depth"], evalFn = PARAMS["evalFn"])
-        strategies = PARAMS["opponents"].append(agent.getAction)
+        strategies.append(agent.getAction)
     elif PARAMS["agent"] == "ExpectimaxAgent":
         agent = ExpectimaxAgent(depth = PARAMS["depth"], evalFn = PARAMS["evalFn"])
-        strategies = PARAMS["opponents"].append(agent.getAction)
-    else:
-        strategies = PARAMS["opponents"]
+        strategies.append(agent.getAction)
 
     wins, points, iterations = simulate(n_simul, strategies, PARAMS["grid_size"], max_iter = MAX_ITER)
 
