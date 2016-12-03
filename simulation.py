@@ -36,7 +36,8 @@ if __name__ ==  "__main__":
     
     strategies = PARAMS["opponents"]
     if PARAMS["agent"] == "RL":
-        if len(sys.argv) > 2 and sys.argv[1] == "load":
+        if len(sys.argv) > 2 and sys.argv[2] == "load":
+            print "Loading weights.."
             rlStrategy = load_rl_strategy(PARAMS["filename"], PARAMS["opponents"],  PARAMS["featureExtractor"])
         else:
             rlStrategy = rl_strategy(PARAMS["opponents"], PARAMS["featureExtractor"], PARAMS["grid_size"], lambda_ = PARAMS["lambda_"], num_trials = PARAMS["num_trials"], max_iter = PARAMS["max_iter"], filename = PARAMS["filename"])
