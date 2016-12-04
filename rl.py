@@ -8,7 +8,6 @@ from collections import defaultdict
 from utils import progressBar
 from copy import deepcopy
 
-DISCOUNT = 0.9
 EXPLORATIONPROB = 0.3
 
 class QLearningAlgorithm:
@@ -91,12 +90,12 @@ class QLearningAlgorithm:
                     if len(newState.snakes) == 1: # it won
                         reward = 2.0 * newState.snakes[rl_id].points
                     else:
-                        reward = newState.snakes[rl_id].points - points
-
+                        # reward = newState.snakes[rl_id].points - points
+                        reward = 0.
                     points = newState.snakes[rl_id].points
                     self.incorporateFeedback(state, action, reward, newState)
                 else: # it died
-                    reward = - points
+                    reward = - 10. # points
                     self.incorporateFeedback(state, action, reward, newState)
 
                 totalReward += totalDiscount * reward
@@ -192,12 +191,12 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
                     if len(newState.snakes) == 1: # it won
                         reward = 2.0 * newState.snakes[rl_id].points
                     else:
-                        reward = newState.snakes[rl_id].points - points
-
+                        # reward = newState.snakes[rl_id].points - points
+                        reward = 0.
                     points = newState.snakes[rl_id].points
                     self.incorporateFeedback(state, action, reward, newState, history)
                 else: # it died
-                    reward = - points
+                    reward = - 10. # points
                     self.incorporateFeedback(state, action, reward, newState, history)
 
                 # add decsion to history, or reset if non-greedy choice
@@ -269,19 +268,22 @@ def projectedDistances(state, action, id):
 
 
 
-def rl_strategy(strategies, featureExtractor, grid_size, lambda_ = None, num_trials = 100, max_iter=1000, filename = "weights.p", verbose = False):
+def rl_strategy(strategies, featureExtractor, discount, grid_size, lambda_ = None, num_trials = 100, max_iter=1000, filename = "weights.p", verbose = False):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
     features = lambda s,a : featureExtractor(s, a, rl_id)
 
     if lambda_:
-        rl = QLambdaLearningAlgorithm(actions, discount = DISCOUNT, featureExtractor = features, lambda_ = lambda_, explorationProb = EXPLORATIONPROB)
+        rl = QLambdaLearningAlgorithm(actions, discount = discount, featureExtractor = features, lambda_ = lambda_, explorationProb = EXPLORATIONPROB)
     else:
-        rl = QLearningAlgorithm(actions, discount = DISCOUNT, featureExtractor = features, explorationProb = EXPLORATIONPROB)
+        rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = features, explorationProb = EXPLORATIONPROB)
     
     rl.train(strategies, grid_size, num_trials=num_trials, max_iter=max_iter, verbose=verbose)
     rl.explorationProb = 0
-    strategy = lambda id,s : rl.getAction(s)[0]
+    if lambda_ is None:
+        strategy = lambda id,s : rl.getAction(s)
+    else:
+        strategy = lambda id,s : rl.getAction(s)[0]
 
     # save learned weights
     with open("data/" + filename, "wb") as fout:
@@ -292,14 +294,14 @@ def rl_strategy(strategies, featureExtractor, grid_size, lambda_ = None, num_tri
         print >> fout, "strategies: ", [s.__name__ for s in strategies]
         print >> fout, "features: ", featureExtractor.__name__
         print >> fout, "grid: {}, lambda: {}, trials: {}, max_iter: {}".format(grid_size, lambda_, num_trials, max_iter)
-        print >> fout, "discount: {}, explorationProb: {}".format(DISCOUNT, EXPLORATIONPROB)
+        print >> fout, "discount: {}, explorationProb: {}".format(discount, EXPLORATIONPROB)
     
     return strategy
 
-def load_rl_strategy(filename, strategies, featureExtractor):
+def load_rl_strategy(filename, strategies, featureExtractor, discount):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
     features = lambda s,a : featureExtractor(s, a, rl_id)
-    rl = QLearningAlgorithm(actions, discount = DISCOUNT, featureExtractor = features, explorationProb = 0, weights = filename)
+    rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = features, explorationProb = 0, weights = filename)
     strategy = lambda id,s : rl.getAction(s)
     return strategy
