@@ -24,12 +24,13 @@ CANDY_BONUS = 3                             # candy value for dead snakes
 class newSnake:
     grid_size = None
 
-    def __init__(self, position):
+    def __init__(self, position, i=0):
         self.position = deque(position)
         self.points = len(position)*CANDY_BONUS
         self.on_tail = False
         self.last_tail = None
         self.bool_pos = np.zeros((self.grid_size, self.grid_size))
+        self.id = i
         for pos in position:
             self.bool_pos[pos] = 1
 
@@ -47,6 +48,10 @@ class newSnake:
 
     def countSnake(self, pos):
         return self.bool_pos[pos]
+
+    def onSnakeExceptLastOrNotGrid(self, pos, n):
+        return not utils.isOnGrid(pos, self.grid_size) or \
+               (self.countSnake(pos) - sum(int(self.position[-i] == pos) for i in xrange(1,n+1)) >= 1)
 
     def pop(self):
         tail = self.position.pop()
@@ -77,13 +82,12 @@ class newSnake:
 
         target = move.applyDirection(head)
         # If a collision already occurred we can't do another one
-        if (self.on_tail and self.onSnake(target) and not self.position[-1] == target):
+        if (self.on_tail and self.onSnakeExceptLastOrNotGrid(target, 1)):
             return False
         # If we would need two collisions in a row there is a problem
         next_target = move.applyDirection(head, mu=2)
-        if (self.onSnakeOrNotGrid(target) and not self.position[-1] == target and
-            self.onSnakeOrNotGrid(next_target) and not next_target == self.position[-2]
-            and not next_target == self.position[-1]):
+        if (self.onSnakeExceptLastOrNotGrid(target, 1) and
+            self.onSnakeExceptLastOrNotGrid(next_target, 2)):
             return False
 
         if move.norm() == 2 and 2 in possibleNorm:
@@ -93,10 +97,8 @@ class newSnake:
 
             next_acc_target = move.applyDirection(head, mu=3)
             # We make sure that we can move without causing death at the next time
-            if (self.onSnakeOrNotGrid(next_acc_target) and not next_acc_target == self.position[-3] and
-                not next_acc_target == self.position[-2] and not next_acc_target == self.position[-1] and
-                self.onSnakeOrNotGrid(next_target) and not next_target == self.position[-2]
-                and not next_target == self.position[-1]):
+            if (self.onSnakeExceptLastOrNotGrid(next_acc_target, 3) and
+                self.onSnakeExceptLastOrNotGrid(next_target)):
                 return False
 
         return True
@@ -122,9 +124,15 @@ class newSnake:
             return before_last_tail
 
         self.pop()
-        head = utils.add(self.position[0], direction)
-        if self.countSnake(head) == 2:
-                self.on_tail = True
+        head = utils.add(self.head(), direction)
+        if not utils.isOnGrid(head, self.grid_size):
+            print head
+            print self.id
+            print self.position
+            print self.bool_pos
+            print self
+        if self.onSnake(head):
+            self.on_tail = True
         self.add(head)
         return None
 
@@ -440,8 +448,8 @@ class State:
         snake = self.snakes.get(player)
         head = snake.position[0]
         return [m for m in MOVES if m.norm() == 1
-                and snake.authorizedMove(m, possibleNorm=[1])
-                and utils.isOnGrid(m.apply(head), self.grid_size)]
+                and utils.isOnGrid(m.apply(head), self.grid_size)
+                and snake.authorizedMove(m, possibleNorm=[1])]
 
 
 class Game:
@@ -476,7 +484,7 @@ class Game:
         for snake, assign in enumerate(assignment):
             head = (random.randint(1, square_size-2) + (assign / n_squares_per_row) * square_size,
                     random.randint(1, square_size-2) + (assign % n_squares_per_row) * square_size)
-            snakes[snake] = newSnake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
+            snakes[snake] = Snake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
 
         candies_to_put = 2 * int(self.candy_ratio) + 1
         start_state = State(snakes, {})
@@ -501,7 +509,7 @@ class Game:
             newState = state
         
         newState.update(actions)
-        rand_pos = (random.randint(1, self.grid_size-1), random.randint(1, self.grid_size-1))
+        rand_pos = (random.randint(0, self.grid_size-1), random.randint(0, self.grid_size-1))
         newState.addCandy(rand_pos, CANDY_VAL)
         return newState
 

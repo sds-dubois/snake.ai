@@ -208,8 +208,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                                                                      gameState.getNextAgent(agent), -float("inf"), beta)
             beta = min(beta, new_v)
             v.append((new_v, best_action))
-        v_min =    min(v)[0]
+        v_min = min(v)[0]
         if len([a for d,a in v if d == v_min and a is not None]) == 0:
-            return random.sample(gameState.actions(agent), 1)[0]
+            if gameState.actions(mm_agent) == []:
+                return None
+            return random.sample(gameState.actions(mm_agent), 1)[0]
         return random.sample([a for d, a in v if d == v_min and a is not None], 1)[0]
 
