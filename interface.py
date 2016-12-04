@@ -7,6 +7,7 @@ import random, math, copy
 import utils
 import numpy as np
 from collections import deque
+from time import time
 from copy import deepcopy
 from move import Move
 
@@ -59,6 +60,10 @@ class newSnake:
         self.last_tail = tail
         return tail
 
+    def popleft(self):
+        head = self.position.popleft()
+        self.bool_pos[head] -= 1
+
     def add(self, pos):
         self.bool_pos[pos] += 1
         self.position.appendleft(pos)
@@ -102,6 +107,15 @@ class newSnake:
                 return False
 
         return True
+
+    def backward(self, last_pos, last_tail):
+        for pos in last_pos:
+            self.popleft()
+            self.addRight(pos)
+        if len(last_pos) == 2:
+            self.addPoints(CANDY_VAL)
+        self.last_tail = last_tail
+        self.on_tail = (self.countSnake(self.head()) >= 2)
 
     def move(self, move):
         '''
@@ -155,7 +169,8 @@ class newSnake:
         self.points -= val
         # check if size decreases
         if self.points / CANDY_BONUS < self.size():
-            self.pop()
+            tail = self.pop()
+            self.last_tail = tail
 
 class Snake:
     """
@@ -269,6 +284,7 @@ class State:
     grid_size = None
     n_snakes = 0
     max_iter = None
+    time_copying = 0.0
 
     def __init__(self, snakes, candies):
         self.snakes = snakes
@@ -332,6 +348,93 @@ class State:
     def onOtherSnakes(self, pos, id):
         return any(s.onSnake(pos) for i,s in self.snakes.iteritems() if i != id)
 
+    def oneAgentUpdate(self, id, m):
+        #Remember changes
+        snake_who_died = None
+        candies_to_add = []
+        candies_removed = []
+        points_won = 0
+        last_tail = self.snakes[id].last_tail
+        last_pos = []
+
+        # update positions
+
+        accelerated = {}
+        # If the snake couldn't move, then it's dead
+        if m is None:
+            snake_who_died = deepcopy(self.snake[id])
+        else:
+            if m.norm() == 2:
+                last_pos.append(self.snakes[id].position[-2])
+            last_pos.append(self.snakes[id].position[-1])
+            new_candy_pos = self.snakes[id].move(m)
+
+            # We remember where to add candies when the snake accelerated
+            if new_candy_pos is not None:
+               candies_to_add.append(new_candy_pos)
+
+            # We collect candies if head touches a candy
+            head = self.snakes[id].head()
+            if head in self.candies:
+                points_won += self.candies.get(head)
+                candies_removed.append((head, self.candies.get(head)))
+                self.snakes[id].addPoints(self.candies.get(head))
+                del self.candies[head]
+
+            # If the snake accelerated, we check if the second part of the body touches a candy
+            if m.norm() == 2:
+                accelerated[id] = True
+                second = self.snakes[id].position[1]
+                if second in self.candies:
+                    points_won += self.candies.get(second)
+                    candies_removed.append((second, self.candies.get(second)))
+                    self.snakes[id].addPoints(self.candies.get(second))
+                    del self.candies[second]
+            else:
+                accelerated[id] = False
+
+        # add candies created by acceleration
+        for cand_pos in candies_to_add:
+            self.addCandy(cand_pos, CANDY_VAL)
+
+        # remove snakes which bumped into other snakes
+        # list of (x,y) points occupied by other snakes
+        if snake_who_died is None and (self.onOtherSnakes(self.snakes[id].position[0], id)\
+                or (accelerated[id] and self.onOtherSnakes(self.snakes[id].position[1], id))\
+                or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size)):
+            snake_who_died = deepcopy(self.snakes[id])
+
+
+        if snake_who_died is not None:
+            # add candies on the snake position before last move
+            self.snakes[id].popleft()
+            for p in self.snakes[id].position:
+                self.candies[p] = CANDY_BONUS
+                candies_to_add.append(p)
+            # print "Snake {} died with {} points".format(id, self.snakes[id].points)
+            del self.snakes[id]
+
+        return last_pos, id, candies_to_add, candies_removed, points_won, last_tail, snake_who_died
+
+    def reverseChanges(self, changes):
+        last_pos, id, candies_added, candies_removed, points_won, last_tail, snake_who_died = changes
+        if snake_who_died is not None:
+            self.snakes[id] = snake_who_died
+        self.snakes[id].removePoints(points_won)
+        self.snakes[id].backward(last_pos, last_tail)
+        for c in set(candies_added):
+            if c not in self.candies:
+                print self.candies
+                print c
+                print candies_added
+                print candies_removed
+                for s in self.snakes.itervalues():
+                    print s.position
+            del self.candies[c]
+        for c, val in candies_removed:
+            self.addCandy(c, val)
+
+
     def update(self, moves):
         """
         `moves` is a dict {snake_id => move}
@@ -380,7 +483,6 @@ class State:
 
         for id in moves.keys():
             # list of (x,y) points occupied by other snakes
-            otherSnakes = [p for s in self.snakes.keys() for p in self.snakes[s].position if s != id]
             if not id in deads and (self.onOtherSnakes(self.snakes[id].position[0], id)\
                     or (accelerated[id] and self.onOtherSnakes(self.snakes[id].position[1], id))\
                     or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size)):
@@ -416,9 +518,7 @@ class State:
         return agent
 
     def generateSuccessor(self, agent, move):
-        new_state = copy.deepcopy(self)
-        new_state.update({agent: move})
-        return new_state
+        return self.oneAgentUpdate(agent, move)
 
     def getScore(self, agent):
         if self.isDraw():
@@ -484,7 +584,7 @@ class Game:
         for snake, assign in enumerate(assignment):
             head = (random.randint(1, square_size-2) + (assign / n_squares_per_row) * square_size,
                     random.randint(1, square_size-2) + (assign % n_squares_per_row) * square_size)
-            snakes[snake] = Snake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
+            snakes[snake] = newSnake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])], snake)
 
         candies_to_put = 2 * int(self.candy_ratio) + 1
         start_state = State(snakes, {})

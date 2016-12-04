@@ -4,7 +4,7 @@ import gui
 import move
 from interface import Game
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
-from minimax import MinimaxAgent, AlphaBetaAgent
+from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
 from pdb import set_trace as t
 
@@ -96,8 +96,9 @@ if __name__ ==  "__main__":
 
 
     minimax_agent = MinimaxAgent(depth=lambda s,a: 2)
-    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: 2)
-    controller([randomStrategy, opportunistStrategy, alphabeta_agent.getAction],
+    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: 2, evalFn=greedyEvaluationFunction)
+    expectimax_agent = ExpectimaxAgent(depth=lambda s,a: 2, evalFn=greedyEvaluationFunction)
+    controller([expectimax_agent.getAction, alphabeta_agent.getAction],
                20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
 
     # rlStrategy = load_rl_strategy("d-weights1.p", [opportunistStrategy], simpleFeatureExtractor1)

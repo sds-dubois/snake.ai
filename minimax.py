@@ -126,19 +126,28 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 return self.evaluationFunction(state, mm_agent)
 
             # Max case
+            M = -float("inf")
             if agent == mm_agent:
-                return max(vMinMax(state.generateSuccessor(agent, action), depth-1, state.getNextAgent(agent))
-                                     for action in state.actions(agent))
+                for action in state.actions(agent):
+                    changes = state.generateSuccessor(agent, action)
+                    M = max(M, vMinMax(state, depth-1, state.getNextAgent(agent)))
+                    state.reverseChanges(changes)
+                return M
             # Mean case
-            return np.mean([vMinMax(state.generateSuccessor(agent, action), depth, state.getNextAgent(agent))
-                                     for action in state.actions(agent)])
+            avg = 0.
+            for action in state.actions(agent):
+                changes = state.generateSuccessor(agent, action)
+                avg += vMinMax(state, depth, state.getNextAgent(agent))
+                state.reverseChanges(changes)
+            return float(avg)/len(state.actions(agent))
         v = []
         if len(gameState.actions(mm_agent)) == 0:
             return None
 
         for action in gameState.actions(mm_agent):
-            v.append((vMinMax(gameState.generateSuccessor(mm_agent, action),
-                             self.depth(gameState, mm_agent), gameState.getNextAgent(mm_agent)), action))
+            changes = gameState.generateSuccessor(mm_agent, action)
+            v.append((vMinMax(gameState,self.depth(gameState, mm_agent), gameState.getNextAgent(mm_agent)), action))
+            gameState.reverseChanges(changes)
         v_max = max(v)[0]
         return random.sample([a for d, a in v if d == v_max], 1)[0]
 
@@ -166,8 +175,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             if agent == mm_agent:
                 v = (-float("inf"),None)
                 for action in state.actions(agent):
-                    vs = vMinMax(state.generateSuccessor(agent, action),
-                                                     depth-1, state.getNextAgent(agent), alpha, beta)
+                    changes = state.generateSuccessor(agent, action)
+                    vs = vMinMax(state, depth-1, state.getNextAgent(agent), alpha, beta)
+                    state.reverseChanges(changes)
                     if (vs[0] > v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
                         v = (vs[0],action)
                     alpha = max(alpha, v[0])
@@ -177,11 +187,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
             v = (float("inf"), None)
             for action in state.actions(agent):
-                vs = vMinMax(
-                    state.generateSuccessor(agent, action),
-                    depth, state.getNextAgent(agent),
-                    alpha, beta
-                )
+                changes = state.generateSuccessor(agent, action)
+                vs = vMinMax(state,depth, state.getNextAgent(agent), alpha, beta)
+                state.reverseChanges(changes)
                 if (vs[0] < v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
                     v = vs
                 beta = min(beta, v[0])
@@ -204,8 +212,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return random.sample(gameState.actions(mm_agent), 1)[0]
 
         for action in gameState.actions(agent):
-            new_v, best_action = vMinMax(gameState.generateSuccessor(agent, action), self.depth(gameState, mm_agent),
+            changes = gameState.generateSuccessor(agent, action)
+            new_v, best_action = vMinMax(gameState, self.depth(gameState, mm_agent),
                                                                      gameState.getNextAgent(agent), -float("inf"), beta)
+            gameState.reverseChanges(changes)
             beta = min(beta, new_v)
             v.append((new_v, best_action))
         v_min = min(v)[0]
