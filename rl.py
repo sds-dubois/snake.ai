@@ -142,8 +142,7 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
         else:
             return max((self.evalQ(state, action), action) for action in self.actions(state))[1], True
 
-    def updateWeights(self, state, action, delta):
-        phi = self.featureExtractor(state, action)
+    def updateWeights(self, phi, delta):
         for k,v in phi:
             self.weights[k] = self.weights[k] - self.getStepSize() * delta * v
 
@@ -164,9 +163,8 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
             self.weights[k] = self.weights[k] - self.getStepSize() * delta * v
 
         for i in xrange(len(history)):
-            s, a = history[-(i+1)] 
             delta *= self.discount * self.lambda_
-            self.updateWeights(s, a, delta)
+            self.updateWeights(history[-(i+1)], delta)
 
     def train(self, strategies, grid_size, num_trials = 100, max_iter = 1000, verbose = False):
         print "RL training"
@@ -201,7 +199,7 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
 
                 # add decsion to history, or reset if non-greedy choice
                 if optimal_action:
-                    history.append((state, action))
+                    history.append(self.featureExtractor(state, action))
                 else:
                     history = []
 
