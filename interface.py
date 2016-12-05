@@ -65,14 +65,15 @@ class State:
         print s
 
 
-    def addCandy(self, pos, val):
+    def addCandy(self, pos, val, dead_snake=-1):
         """
         Adds a candy of value val and position pos. If there is already a snake at the position, we don't add it
         :param pos: the position for the candy as a tuple
         :param val: the value of the candy
         :return: True if the candy has been added, False if not
         """
-        if all(not s.onSnake(pos) for s in self.snakes.itervalues()) and not pos in self.candies.keys():
+        if all(not s.onSnake(pos) for a, s in self.snakes.iteritems() if a != dead_snake) \
+                and not pos in self.candies.keys():
             self.candies[pos] = val
             return True
         return False
@@ -149,8 +150,8 @@ class State:
             # add candies on the snake position before last move
             self.snakes[id].popleft()
             for p in self.snakes[id].position:
-                self.addCandy(p, CANDY_BONUS)
-                candies_to_add.append(p)
+                if self.addCandy(p, CANDY_BONUS, dead_snake=id):
+                    candies_to_add.append(p)
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
 
@@ -210,7 +211,7 @@ class State:
 
         # add candies created by acceleration
         for cand_pos in candies_to_add:
-            self.addCandy(cand_pos, CANDY_VAL)
+            self.addCandy(cand_pos, CANDY_BONUS)
 
         # remove snakes which bumped into other snakes
 
@@ -227,7 +228,7 @@ class State:
             self.scores[id] = (rank, self.snakes[id].points) 
             # add candies on the snake position before last move
             for p in self.snakes[id].position:
-                self.addCandy(p, CANDY_BONUS)
+                self.addCandy(p, CANDY_BONUS, dead_snake=id)
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
         
