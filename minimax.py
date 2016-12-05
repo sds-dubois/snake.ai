@@ -14,7 +14,7 @@ class Agent(object):
     def getAction(self, state):
         """
         The Agent will receive a GameState and
-        must return an move from Move (Direction and Norm)
+        must return a move from Move (Direction and Norm)
         """
         raise NotImplementedError("getAction not implemented")
 
@@ -32,6 +32,12 @@ def greedyEvaluationFunction(state, agent):
     return state.getScore(agent) -min(
         float(utils.dist(state.snakes[agent].head(), candy))/(2*state.grid_size) for candy in state.candies.iterkeys()
     )
+
+def TdEvaluationFunction(state, agent, featureExtractor,weights):
+    score = 0
+    for f, v in self.featureExtractor(state,None,agent):
+        score += self.weights[f] * v
+    return score
 
 def cowardDepthFunction(state, mm_agent):
     return 1

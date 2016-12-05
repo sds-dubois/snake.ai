@@ -338,7 +338,7 @@ class State:
         accelerated = {}
         for id, m in moves.iteritems():
             # If the snake couldn't move, then it's dead
-            if m is None:
+            if m is None or not self.snakes[id].authorizedMove(m):
                 deads.append(id)
                 continue
 
