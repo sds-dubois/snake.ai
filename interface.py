@@ -338,7 +338,7 @@ class State:
         accelerated = {}
         for id, m in moves.iteritems():
             # If the snake couldn't move, then it's dead
-            if m is None:
+            if m is None or not self.snakes[id].authorizedMove(m):
                 deads.append(id)
                 continue
 
@@ -476,7 +476,7 @@ class Game:
         for snake, assign in enumerate(assignment):
             head = (random.randint(1, square_size-2) + (assign / n_squares_per_row) * square_size,
                     random.randint(1, square_size-2) + (assign % n_squares_per_row) * square_size)
-            snakes[snake] = newSnake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
+            snakes[snake] = Snake([head, utils.add(head, random.sample(DIRECTIONS, 1)[0])])
 
         candies_to_put = 2 * int(self.candy_ratio) + 1
         start_state = State(snakes, {})
