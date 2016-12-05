@@ -33,8 +33,13 @@ def greedyEvaluationFunction(state, agent):
         float(utils.dist(state.snakes[agent].head(), candy))/(2*state.grid_size) for candy in state.candies.iterkeys()
     )
 
-def cowardDepthFunction(state, mm_agent):
-    return 1
+def cowardDepthFunction(state, mm_agent, radius):
+    if mm_agent not in state.snakes.iterkeys():
+        return 0
+    head = state.snakes[mm_agent].head()
+    if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
+        return 2
+    return 0
 
 class MultiAgentSearchAgent(Agent):
     """
@@ -122,7 +127,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 return -float("inf")
             if len(state.actions(agent)) == 0:
                 return vMinMax(state, depth, state.getNextAgent(agent))
-            if depth == 1 and agent == mm_agent:
+            if depth <= 1 and agent == mm_agent:
                 return self.evaluationFunction(state, mm_agent)
 
             # Max case
@@ -140,6 +145,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 avg += vMinMax(state, depth, state.getNextAgent(agent))
                 state.reverseChanges(changes)
             return float(avg)/len(state.actions(agent))
+
         v = []
         if len(gameState.actions(mm_agent)) == 0:
             return None
@@ -198,7 +204,16 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return v
 
         if self.depth(gameState, mm_agent) <= 0:
-            return self.evaluationFunction(gameState, mm_agent)
+            M = [(-float("inf"), None)]
+            for action in gameState.actions(mm_agent):
+                changes = gameState.generateSuccessor(mm_agent, action)
+                v = self.evaluationFunction(gameState, mm_agent)
+                gameState.reverseChanges(changes)
+                if v == M[0][0]:
+                    M.append((v, action))
+                elif v > M[0][0]:
+                    M = [(v, action)]
+            return random.sample(M, 1)[0][1]
 
         v = []
         beta = float("inf")
