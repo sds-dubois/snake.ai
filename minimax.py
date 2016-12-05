@@ -29,6 +29,8 @@ def simpleEvaluationFunction(state, agent):
     return state.getScore(agent)
 
 def greedyEvaluationFunction(state, agent):
+    if agent not in state.snakes:
+        return state.getScore(agent)
     return state.getScore(agent) -min(
         float(utils.dist(state.snakes[agent].head(), candy))/(2*state.grid_size) for candy in state.candies.iterkeys()
     )
