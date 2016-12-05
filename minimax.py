@@ -14,7 +14,7 @@ class Agent(object):
     def getAction(self, state):
         """
         The Agent will receive a GameState and
-        must return an move from Move (Direction and Norm)
+        must return a move from Move (Direction and Norm)
         """
         raise NotImplementedError("getAction not implemented")
 
@@ -33,6 +33,31 @@ def greedyEvaluationFunction(state, agent):
         float(utils.dist(state.snakes[agent].head(), candy))/(2*state.grid_size) for candy in state.candies.iterkeys()
     )
 
+def cowardDepthFunction(state, mm_agent, radius):
+    if mm_agent not in state.snakes.iterkeys():
+        return 0
+    head = state.snakes[mm_agent].head()
+    if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
+        return 2
+    return 0
+
+def cowardCenterDepthFunction(state, mm_agent, radius):
+    if mm_agent not in state.snakes.iterkeys():
+        return 0
+    head = state.snakes[mm_agent].head()
+    grid_size = state.snakes[mm_agent].grid_size
+    if min(head[0], head[1]) <= radius-1 or max(head[0], head[1]) >= grid_size-radius:
+        return 2
+    if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
+        return 2
+    return 0
+
+def TdEvaluationFunction(state, agent, featureExtractor,weights):
+    score = 0
+    for f, v in self.featureExtractor(state,None,agent):
+        score += self.weights[f] * v
+    return score
+
 class MultiAgentSearchAgent(Agent):
     """
         This class provides some common elements to all multi-agent searchers.
@@ -40,7 +65,7 @@ class MultiAgentSearchAgent(Agent):
         to the MinimaxAgent, AlphaBetaAgent & ExpectimaxAgent.
     """
 
-    def __init__(self, evalFn = simpleEvaluationFunction, depth = 2):
+    def __init__(self, evalFn = simpleEvaluationFunction, depth = lambda s, a: 2):
         self.evaluationFunction = evalFn
         self.depth = depth
 
@@ -49,7 +74,7 @@ class FunmaxAgent(MultiAgentSearchAgent):
         Minimax agent: the synchronous approach is changed into an asynchronous one
     """
 
-    def __init__(self, func, evalFn = simpleEvaluationFunction, depth = 2):
+    def __init__(self, func, evalFn = simpleEvaluationFunction, depth = lambda s, a: 2):
         super(FunmaxAgent, self).__init__(evalFn=evalFn, depth=depth)
         self.func = func
 
@@ -68,7 +93,10 @@ class FunmaxAgent(MultiAgentSearchAgent):
             if len(state.actions(agent)) == 0 and agent == mm_agent:
                 return -float("inf"), None
             if len(state.actions(agent)) == 0:
-                return vMinMax(state, depth, state.getNextAgent(agent))
+                changes = state.generateSuccessor(agent, None)
+                v = vMinMax(state, depth, state.getNextAgent(agent))
+                state.reverseChanges(changes)
+                return v
             if depth == 0:
                 return self.evaluationFunction(state, mm_agent), None
 
@@ -81,6 +109,9 @@ class FunmaxAgent(MultiAgentSearchAgent):
                                      for action in state.actions(agent))
         v = []
 
+        if self.depth(gameState, mm_agent) <= 0:
+            return self.evaluationFunction(gameState, mm_agent)
+
         agent = gameState.getNextAgent(mm_agent)
         while(len(gameState.actions(agent)) == 0 and agent != mm_agent):
             agent = gameState.getNextAgent(agent)
@@ -89,13 +120,15 @@ class FunmaxAgent(MultiAgentSearchAgent):
             return random.sample(gameState.actions(mm_agent), 1)[0]
 
         for action in gameState.actions(agent):
-            v.append(vMinMax(gameState.generateSuccessor(agent, action), self.depth, gameState.getNextAgent(agent)))
+            v.append(vMinMax(gameState.generateSuccessor(agent, action),
+                             self.depth(gameState, mm_agent), gameState.getNextAgent(agent)))
         v_min = min(v)[0]
         return random.sample([a for d, a in v if d == v_min], 1)[0]
     
 class MinimaxAgent(FunmaxAgent):
-    def __init__(self, evalFn = simpleEvaluationFunction, depth = 2):
+    def __init__(self, evalFn = simpleEvaluationFunction, depth = lambda s: 2):
         super(MinimaxAgent, self).__init__(min, evalFn=evalFn, depth=depth)
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     def getAction(self, mm_agent, gameState):
@@ -113,24 +146,37 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             if len(state.actions(agent)) == 0 and agent == mm_agent:
                 return -float("inf")
             if len(state.actions(agent)) == 0:
-                return vMinMax(state, depth, state.getNextAgent(agent))
-            if depth == 1 and agent == mm_agent:
+                changes = state.generateSuccessor(agent, None)
+                v = vMinMax(state, depth, state.getNextAgent(agent))
+                state.reverseChanges(changes)
+                return v
+            if depth <= 1 and agent == mm_agent:
                 return self.evaluationFunction(state, mm_agent)
 
             # Max case
+            M = -float("inf")
             if agent == mm_agent:
-                return max(vMinMax(state.generateSuccessor(agent, action), depth-1, state.getNextAgent(agent))
-                                     for action in state.actions(agent))
+                for action in state.actions(agent):
+                    changes = state.generateSuccessor(agent, action)
+                    M = max(M, vMinMax(state, depth-1, state.getNextAgent(agent)))
+                    state.reverseChanges(changes)
+                return M
             # Mean case
-            return np.mean([vMinMax(state.generateSuccessor(agent, action), depth, state.getNextAgent(agent))
-                                     for action in state.actions(agent)])
+            avg = 0.
+            for action in state.actions(agent):
+                changes = state.generateSuccessor(agent, action)
+                avg += vMinMax(state, depth, state.getNextAgent(agent))
+                state.reverseChanges(changes)
+            return float(avg)/len(state.actions(agent))
+
         v = []
         if len(gameState.actions(mm_agent)) == 0:
             return None
 
         for action in gameState.actions(mm_agent):
-            v.append((vMinMax(gameState.generateSuccessor(mm_agent, action),
-                             self.depth, gameState.getNextAgent(mm_agent)), action))
+            changes = gameState.generateSuccessor(mm_agent, action)
+            v.append((vMinMax(gameState,self.depth(gameState, mm_agent), gameState.getNextAgent(mm_agent)), action))
+            gameState.reverseChanges(changes)
         v_max = max(v)[0]
         return random.sample([a for d, a in v if d == v_max], 1)[0]
 
@@ -152,14 +198,18 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             if len(state.actions(agent)) == 0 and agent == mm_agent:
                 return -float("inf"), None
             if len(state.actions(agent)) == 0:
-                return vMinMax(state, depth, state.getNextAgent(agent), alpha, beta)
+                changes = state.generateSuccessor(agent, None)
+                v = vMinMax(state, depth, state.getNextAgent(agent), alpha, beta)
+                state.reverseChanges(changes)
+                return v
             if depth == 0:
                 return self.evaluationFunction(state, mm_agent), None
             if agent == mm_agent:
                 v = (-float("inf"),None)
                 for action in state.actions(agent):
-                    vs = vMinMax(state.generateSuccessor(agent, action),
-                                                     depth-1, state.getNextAgent(agent), alpha, beta)
+                    changes = state.generateSuccessor(agent, action)
+                    vs = vMinMax(state, depth-1, state.getNextAgent(agent), alpha, beta)
+                    state.reverseChanges(changes)
                     if (vs[0] > v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
                         v = (vs[0],action)
                     alpha = max(alpha, v[0])
@@ -169,17 +219,28 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
             v = (float("inf"), None)
             for action in state.actions(agent):
-                vs = vMinMax(
-                    state.generateSuccessor(agent, action),
-                    depth, state.getNextAgent(agent),
-                    alpha, beta
-                )
+                changes = state.generateSuccessor(agent, action)
+                vs = vMinMax(state,depth, state.getNextAgent(agent), alpha, beta)
+                state.reverseChanges(changes)
                 if (vs[0] < v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
                     v = vs
                 beta = min(beta, v[0])
                 if beta <= alpha:
                     break
             return v
+
+        if self.depth(gameState, mm_agent) <= 0:
+            M = [(-float("inf"), None)]
+            for action in gameState.actions(mm_agent):
+                changes = gameState.generateSuccessor(mm_agent, action)
+                v = self.evaluationFunction(gameState, mm_agent)
+                gameState.reverseChanges(changes)
+                if v == M[0][0]:
+                    M.append((v, action))
+                elif v > M[0][0]:
+                    M = [(v, action)]
+            return random.sample(M, 1)[0][1]
+
         v = []
         beta = float("inf")
         agent = gameState.getNextAgent(mm_agent)
@@ -192,11 +253,16 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return random.sample(gameState.actions(mm_agent), 1)[0]
 
         for action in gameState.actions(agent):
-            new_v, best_action = vMinMax(gameState.generateSuccessor(agent, action), self.depth,
+            changes = gameState.generateSuccessor(agent, action)
+            new_v, best_action = vMinMax(gameState, self.depth(gameState, mm_agent),
                                                                      gameState.getNextAgent(agent), -float("inf"), beta)
+            gameState.reverseChanges(changes)
             beta = min(beta, new_v)
             v.append((new_v, best_action))
-        v_min =    min(v)[0]
+        v_min = min(v)[0]
         if len([a for d,a in v if d == v_min and a is not None]) == 0:
-            return random.sample(gameState.actions(agent), 1)[0]
+            if gameState.actions(mm_agent) == []:
+                return None
+            return random.sample(gameState.actions(mm_agent), 1)[0]
         return random.sample([a for d, a in v if d == v_min and a is not None], 1)[0]
+
