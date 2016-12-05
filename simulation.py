@@ -64,9 +64,12 @@ if __name__ ==  "__main__":
 
         for i in range(len(strategies)):
             print >> fout, "\t Snake {} wins {:.2f}% of the games, with {:.2f} points on average".format(i, wins[i]*100, points[i])
+            print "\t Snake {} wins {:.2f}% of the games, with {:.2f} points on average".format(i, wins[i]*100, points[i])
         print >> fout, "\nScores"
+        print "\nScores"
         for i in range(len(strategies)):
             print >> fout, "\t Snake {}: avg score = {:.2f}, finishes with {:.2f} points on average".format(i, np.mean([p/r for r,p in scores[i]]), np.mean([p for r,p in scores[i]]))
+            print "\t Snake {}: avg score = {:.2f}, finishes with {:.2f} points on average".format(i, np.mean([p/r for r,p in scores[i]]), np.mean([p for r,p in scores[i]]))
         print >> fout, "\nIterations per game: {:.2f} +- {:.2f}".format(np.mean(iterations), np.std(iterations))
         print >> fout, "Time out is reached {:.2f}% of the time"\
             .format(100*sum(float(x==MAX_ITER) for x in iterations)/len(iterations))
