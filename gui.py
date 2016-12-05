@@ -6,8 +6,9 @@ class Options:
     def __init__(self):
         # Colors
         self.colors = {'BLACK' : (0, 0, 0), 'WHITE' : (255,255,255), 'RED' : (255,0,0), 'GREEN':(0,255,0),\
-                       'BLUE':(0,0,255),'BRONZE':(205,127,50), 'SILVER':(192,192,192), 'GOLD':(212,175,55)}
-        self.snake_colors = ['RED','GREEN','BLUE']
+                       'BLUE':(0,0,255),'BRONZE':(205,127,50), 'GRAY':(180,180,180), 'GOLD':(212,175,55),\
+                       'VIOLET' : (200,0,255)}
+        self.snake_colors = ['RED','GREEN','BLUE','VIOLET','GRAY']
         self.candy_colors = ['BRONZE','GOLD']
         self.headColor = 'WHITE'
         # Segment geometry        
