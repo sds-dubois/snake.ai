@@ -14,7 +14,7 @@ class Agent(object):
     def getAction(self, state):
         """
         The Agent will receive a GameState and
-        must return an move from Move (Direction and Norm)
+        must return a move from Move (Direction and Norm)
         """
         raise NotImplementedError("getAction not implemented")
 
@@ -52,6 +52,11 @@ def cowardCenterDepthFunction(state, mm_agent, radius):
         return 2
     return 0
 
+def TdEvaluationFunction(state, agent, featureExtractor,weights):
+    score = 0
+    for f, v in self.featureExtractor(state,None,agent):
+        score += self.weights[f] * v
+    return score
 
 class MultiAgentSearchAgent(Agent):
     """

@@ -2,7 +2,7 @@ import sys
 import pygame
 import gui
 import move
-from interface import Game
+from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
 from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction, cowardDepthFunction, cowardCenterDepthFunction
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
@@ -57,8 +57,10 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
                     
             if not arrow_key:
                 human_action = prev_action
-        # Compute the actions for each player following its strategy
+        # Compute the actions for each player following its strategy (except human)
         actions = {i: strategies[i](i, state) for i in state.snakes.keys() if i!=i_human}
+ 
+        # Assign human action
         if human_action != None: 
             actions[i_human] = human_action 
             prev_action = human_action
@@ -68,7 +70,8 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
             print actions
 
         # Update the state
-        state = game.succ(state, actions, copy = False)
+        if not game_over:
+            state = game.succ(state, actions, copy = False)
         # Pause
         if game_speed:
             clock.tick(game_speed)
