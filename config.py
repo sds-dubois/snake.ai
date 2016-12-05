@@ -13,5 +13,5 @@ PARAMS = {
     "grid_size"        : 20,
     "num_trials"       : 1000,
     "max_iter"         : 3000,
-    "filename"         : "nr3-td-weights1c.p"
+    "filename"         : "nr3-td-weights1c"
 }

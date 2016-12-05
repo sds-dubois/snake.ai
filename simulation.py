@@ -44,9 +44,9 @@ if __name__ ==  "__main__":
     if PARAMS["agent"] == "RL":
         if len(sys.argv) > 2 and sys.argv[2] == "load":
             print "Loading weights.."
-            rlStrategy = load_rl_strategy(PARAMS["filename"], PARAMS["opponents"],  PARAMS["featureExtractor"], PARAMS["discount"])
+            rlStrategy = load_rl_strategy(PARAMS["filename"] + ".p", PARAMS["opponents"],  PARAMS["featureExtractor"], PARAMS["discount"])
         else:
-            rlStrategy = rl_strategy(PARAMS["opponents"], PARAMS["featureExtractor"], PARAMS["discount"], PARAMS["grid_size"], lambda_ = PARAMS["lambda_"], num_trials = PARAMS["num_trials"], max_iter = PARAMS["max_iter"], filename = PARAMS["filename"])
+            rlStrategy = rl_strategy(PARAMS["opponents"], PARAMS["featureExtractor"], PARAMS["discount"], PARAMS["grid_size"], lambda_ = PARAMS["lambda_"], num_trials = PARAMS["num_trials"], max_iter = PARAMS["max_iter"], filename = PARAMS["filename"] + ".p")
         strategies.append(rlStrategy)
     elif PARAMS["agent"] == "AlphaBeta":
         agent = AlphaBetaAgent(depth = PARAMS["depth"], evalFn = PARAMS["evalFn"])
@@ -57,7 +57,7 @@ if __name__ ==  "__main__":
 
     wins, points, scores, iterations = simulate(n_simul, strategies, PARAMS["grid_size"], max_iter = MAX_ITER)
 
-    with open("experiments/{}txt".format(PARAMS["filename"][:-1]), "wb") as fout:
+    with open("experiments/{}.txt".format(PARAMS["filename"]), "wb") as fout:
         print >> fout, "\n\n=======Results======="
         print >> fout, "Run {} simulations".format(n_simul)
         print >> fout, "Max iteration:", MAX_ITER, "\n"
