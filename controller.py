@@ -102,13 +102,15 @@ if __name__ ==  "__main__":
     minimax_agent = MinimaxAgent(depth=lambda s,a: 2)
     alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
     expectimax_agent = ExpectimaxAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
-    controller([expectimax_agent.getAction, alphabeta_agent.getAction, opportunistStrategy],
-               20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
-
+    
+    
+    strategies = [humanStrategy, smartGreedyStrategy]
+    controller(strategies,
+        30, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
     # rlStrategy = load_rl_strategy("d-weights1.p", [opportunistStrategy], simpleFeatureExtractor1)
     # rlStrategy = load_rl_strategy("d-weights5.p", [randomStrategy, smartGreedyStrategy, opportunistStrategy], simpleFeatureExtractor1)
 
-    # strategies = [opportunistStrategy, rlStrategy]
+    # strategies = [humanStrategy, opportunistStrategy]
     # strategies = [randomStrategy, smartGreedyStrategy, opportunistStrategy, rlStrategy]
 
     # controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
