@@ -148,7 +148,7 @@ class State:
             # add candies on the snake position before last move
             self.snakes[id].popleft()
             for p in self.snakes[id].position:
-                self.candies[p] = CANDY_BONUS
+                self.addCandy(p, CANDY_BONUS)
                 candies_to_add.append(p)
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
@@ -162,13 +162,6 @@ class State:
         self.snakes[id].removePoints(points_won)
         self.snakes[id].backward(last_pos, last_tail)
         for c in set(candies_added):
-            if c not in self.candies:
-                print self.candies
-                print c
-                print candies_added
-                print candies_removed
-                for s in self.snakes.itervalues():
-                    print s.position
             del self.candies[c]
         for c, val in candies_removed:
             self.addCandy(c, val)
@@ -230,9 +223,8 @@ class State:
 
         for id in deads:
             # add candies on the snake position before last move
-            self.snakes[id].popleft()
             for p in self.snakes[id].position:
-                self.candies[p] = CANDY_BONUS
+                self.addCandy(p, CANDY_BONUS)
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
 
