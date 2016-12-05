@@ -1,5 +1,6 @@
 # Manage GUI
 import pygame, interface
+import collections
 from pdb import set_trace as t
 class Options:
     def __init__(self):
@@ -7,7 +8,7 @@ class Options:
         self.colors = {'BLACK' : (0, 0, 0), 'WHITE' : (255,255,255), 'RED' : (255,0,0), 'GREEN':(0,255,0),\
                        'BLUE':(0,0,255),'BRONZE':(205,127,50), 'SILVER':(192,192,192), 'GOLD':(212,175,55)}
         self.snake_colors = ['RED','GREEN','BLUE']
-        self.candy_colors = ['SILVER','GOLD']
+        self.candy_colors = ['BRONZE','GOLD']
         self.headColor = 'WHITE'
         # Segment geometry        
         self.segment_side = 10
@@ -19,12 +20,12 @@ class Options:
 class SegmentSprite(pygame.sprite.Sprite):
     # -- Methods
     # Constructor function
-    def __init__(self, position,color, options):
+    def __init__(self, position,rgb_color, options):
         # Call the parent's constructor
         super(SegmentSprite,self).__init__() 
         # Set height, width
         self.image = pygame.Surface([options.segment_side, options.segment_side])
-        self.image.fill(options.colors[color])
+        self.image.fill(rgb_color)
 
         # Make our top-left corner the passed-in location.
         self.rect = self.image.get_rect()
@@ -36,12 +37,23 @@ class SegmentSprite(pygame.sprite.Sprite):
 
 class SnakeSprite:
     def __init__(self,positions,color,options):
-
         head = positions[0]
         tail = positions[1:]   
         # Create list of all segment objects
-        self.segments = [SegmentSprite(head, options.headColor, options)] + [SegmentSprite(pos, color, options) for pos in tail ]
-        
+        segments = [SegmentSprite(head, options.colors[options.headColor], options)] 
+        pos_count = collections.defaultdict(int)
+        for pos in tail:
+            pos_count[pos] +=1
+        for pos,n in pos_count.iteritems():
+            tile_color = options.colors[color]
+            if n>1:
+                tile_color = self.darken(tile_color)                    
+            segments.append(SegmentSprite(pos, tile_color, options))
+        self.segments = segments
+
+    def darken(self,rgb_color):
+        mu = 0.6
+        return tuple([int(c * mu) for c in rgb_color])
 class Window:
     def __init__(self,grid_size,title,options): 
         self.options = options       
@@ -58,11 +70,11 @@ class Window:
         # Show candies
         for pos,value in state.candies.items():
             color = 'GOLD' if value == interface.CANDY_BONUS else 'BRONZE'
-            self.all_sprites.add(SegmentSprite(self.xy2uv([pos])[0],color,self.options))
+            self.all_sprites.add(SegmentSprite(self.xy2uv([pos])[0],self.options.colors[color],self.options))
 
         # Show Snakes
         for i,snake in state.snakes.items():
-            color = self.options.snake_colors[i % len(self.options.snake_colors)]
+            color = self.options.snake_colors[i % len(self.options.snake_colors)] 
             self.all_sprites.add(SnakeSprite(self.xy2uv(snake.position),color,self.options).segments)
         
 
