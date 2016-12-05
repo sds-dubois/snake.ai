@@ -87,15 +87,13 @@ class QLearningAlgorithm:
 
                 newState = game.succ(state, actions)
                 if rl_id in newState.snakes:
+                    reward = newState.snakes[rl_id].points - points
                     if len(newState.snakes) == 1: # it won
-                        reward = 2.0 * newState.snakes[rl_id].points
-                    else:
-                        # reward = newState.snakes[rl_id].points - points
-                        reward = 0.
+                        reward += 10.
                     points = newState.snakes[rl_id].points
                     self.incorporateFeedback(state, action, reward, newState)
                 else: # it died
-                    reward = - 10. # points
+                    reward = - 10.
                     self.incorporateFeedback(state, action, reward, newState)
 
                 totalReward += totalDiscount * reward
@@ -186,15 +184,13 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
 
                 newState = game.succ(state, actions)
                 if rl_id in newState.snakes:
+                    reward = newState.snakes[rl_id].points - points
                     if len(newState.snakes) == 1: # it won
-                        reward = 2.0 * newState.snakes[rl_id].points
-                    else:
-                        # reward = newState.snakes[rl_id].points - points
-                        reward = 0.
+                        reward += 10.
                     points = newState.snakes[rl_id].points
                     self.incorporateFeedback(state, action, reward, newState, history)
                 else: # it died
-                    reward = - 10. # points
+                    reward = - 10.
                     self.incorporateFeedback(state, action, reward, newState, history)
 
                 # add decsion to history, or reset if non-greedy choice
