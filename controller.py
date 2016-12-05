@@ -4,8 +4,8 @@ import gui
 import move
 from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
-from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction, cowardDepthFunction, cowardCenterDepthFunction
-from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor0, simpleFeatureExtractor1, simpleFeatureExtractor2
+from minimax import MinimaxAgent, AlphaBetaAgent
+from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor1, simpleFeatureExtractor2
 from pdb import set_trace as t
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 0, gui_active = False, game_speed = None):
