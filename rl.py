@@ -240,7 +240,7 @@ def simpleFeatureExtractor2(state, action, id):
     features = [(('candy', utils.add(head, c, mu = -1), dir_, norm_), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
     features += [(('adv-head', utils.add(head, s.position[0], mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() if k != id and utils.dist(head, s.position[0]) < 12]
     features += [(('adv-tail', utils.add(head, t, mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() for t in s.position[1:] if k != id and utils.dist(head, t) < 12]
-    features += [(('my-tail', utils.add(head, t, mu = -1), dir_, norm_), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 12]
+    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1), dir_, norm_), 1.) for i in xrange(1, len(state.snakes[id])) if utils.dist(head, state.snakes[id].position[i]) < 12]
     features += [(('x', head[0], dir_, norm_), 1.), (('y', head[1], dir_, norm_), 1.)]
     return features
 
@@ -253,7 +253,7 @@ def projectedDistances(state, action, id):
     head = agent.position[0]
     features = [(('candy', utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
     features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 12]
-    features += [(('my-tail', utils.add(head, t, mu = -1)), 1.) for t in state.snakes[id].position[1:] if utils.dist(head, t) < 12]
+    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1)), 1.) for i in xrange(1, len(state.snakes[id])) if utils.dist(head, state.snakes[id].position[i]) < 12]
     features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
     return features
 
