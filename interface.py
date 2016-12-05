@@ -101,7 +101,7 @@ class State:
         accelerated = {}
         # If the snake couldn't move, then it's dead
         if m is None:
-            snake_who_died = deepcopy(self.snake[id])
+            snake_who_died = deepcopy(self.snakes[id])
         else:
             if m.norm() == 2:
                 last_pos.append(self.snakes[id].position[-2])
@@ -230,6 +230,7 @@ class State:
 
         for id in deads:
             # add candies on the snake position before last move
+            self.snakes[id].popleft()
             for p in self.snakes[id].position:
                 self.candies[p] = CANDY_BONUS
             # print "Snake {} died with {} points".format(id, self.snakes[id].points)

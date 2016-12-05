@@ -41,6 +41,18 @@ def cowardDepthFunction(state, mm_agent, radius):
         return 2
     return 0
 
+def cowardCenterDepthFunction(state, mm_agent, radius):
+    if mm_agent not in state.snakes.iterkeys():
+        return 0
+    head = state.snakes[mm_agent].head()
+    grid_size = state.snakes[mm_agent].grid_size
+    if min(head[0], head[1]) <= radius-1 or max(head[0], head[1]) >= grid_size-radius:
+        return 2
+    if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
+        return 2
+    return 0
+
+
 class MultiAgentSearchAgent(Agent):
     """
         This class provides some common elements to all multi-agent searchers.
@@ -76,7 +88,10 @@ class FunmaxAgent(MultiAgentSearchAgent):
             if len(state.actions(agent)) == 0 and agent == mm_agent:
                 return -float("inf"), None
             if len(state.actions(agent)) == 0:
-                return vMinMax(state, depth, state.getNextAgent(agent))
+                changes = state.generateSuccessor(agent, None)
+                v = vMinMax(state, depth, state.getNextAgent(agent))
+                state.reverseChanges(changes)
+                return v
             if depth == 0:
                 return self.evaluationFunction(state, mm_agent), None
 
@@ -126,7 +141,10 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             if len(state.actions(agent)) == 0 and agent == mm_agent:
                 return -float("inf")
             if len(state.actions(agent)) == 0:
-                return vMinMax(state, depth, state.getNextAgent(agent))
+                changes = state.generateSuccessor(agent, None)
+                v = vMinMax(state, depth, state.getNextAgent(agent))
+                state.reverseChanges(changes)
+                return v
             if depth <= 1 and agent == mm_agent:
                 return self.evaluationFunction(state, mm_agent)
 
@@ -175,7 +193,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             if len(state.actions(agent)) == 0 and agent == mm_agent:
                 return -float("inf"), None
             if len(state.actions(agent)) == 0:
-                return vMinMax(state, depth, state.getNextAgent(agent), alpha, beta)
+                changes = state.generateSuccessor(agent, None)
+                v = vMinMax(state, depth, state.getNextAgent(agent), alpha, beta)
+                state.reverseChanges(changes)
+                return v
             if depth == 0:
                 return self.evaluationFunction(state, mm_agent), None
             if agent == mm_agent:
