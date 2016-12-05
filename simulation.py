@@ -12,6 +12,8 @@ def simulate(n_simul, strategies, grid_size, candy_ratio = 1., max_iter = 500):
     print "Simulations"
     wins = dict((id, 0.) for id in xrange(len(strategies)))
     points = dict((id, []) for id in xrange(len(strategies)))
+    scores = dict((id, []) for id in xrange(len(strategies)))
+
     iterations = []
     for it in xrange(n_simul):
         progressBar(it, n_simul)
@@ -19,10 +21,14 @@ def simulate(n_simul, strategies, grid_size, candy_ratio = 1., max_iter = 500):
         if len(endState.snakes) == 1:
             wins[endState.snakes.keys()[0]] += 1. / n_simul
             points[endState.snakes.keys()[0]].append(endState.snakes.values()[0].points)
+
+        for id in xrange(len(strategies)):
+            scores[id].append(endState.scores[id])
+
         iterations.append(endState.iter)
     progressBar(n_simul, n_simul)
     points = dict((id, sum(val)/len(val)) for id,val in points.iteritems())
-    return wins, points, iterations
+    return wins, points, scores, iterations
 
 
 if __name__ ==  "__main__":
@@ -49,14 +55,21 @@ if __name__ ==  "__main__":
         agent = ExpectimaxAgent(depth = PARAMS["depth"], evalFn = PARAMS["evalFn"])
         strategies.append(agent.getAction)
 
-    wins, points, iterations = simulate(n_simul, strategies, PARAMS["grid_size"], max_iter = MAX_ITER)
+    wins, points, scores, iterations = simulate(n_simul, strategies, PARAMS["grid_size"], max_iter = MAX_ITER)
 
+    with open("experiments/{}txt".format(PARAMS["filename"][:-1]), "wb") as fout:
+        print >> fout, "\n\n=======Results======="
+        print >> fout, "Run {} simulations".format(n_simul)
+        print >> fout, "Max iteration:", MAX_ITER, "\n"
 
-    print "\n\n=======Results======="
-    print "Run {} simulations".format(n_simul)
-    print "Max iteration:", MAX_ITER, "\n"
-    for i in range(len(strategies)):
-        print "\t Snake {} wins {:.2f}% of the games, with {:.2f} points on average".format(i, wins[i]*100, points[i])
-    print "\nIterations per game: {:.2f} +- {:.2f}".format(np.mean(iterations), np.std(iterations))
-    print "Time out is reached {:.2f}% of the time"\
-        .format(100*sum(float(x==MAX_ITER) for x in iterations)/len(iterations))
+        for i in range(len(strategies)):
+            print >> fout, "\t Snake {} wins {:.2f}% of the games, with {:.2f} points on average".format(i, wins[i]*100, points[i])
+        print >> fout, "\nScores"
+        for i in range(len(strategies)):
+            print >> fout, "\t Snake {}: avg score = {:.2f}, finishes with {:.2f} points on average".format(i, np.mean([p/r for r,p in scores[i]]), np.mean([p for r,p in scores[i]]))
+        print >> fout, "\nIterations per game: {:.2f} +- {:.2f}".format(np.mean(iterations), np.std(iterations))
+        print >> fout, "Time out is reached {:.2f}% of the time"\
+            .format(100*sum(float(x==MAX_ITER) for x in iterations)/len(iterations))
+        
+        print >> fout, "\n\nParams"
+        print >> fout, "".join("\t{}: {}\n".format(k,v) for k,v in PARAMS.iteritems())

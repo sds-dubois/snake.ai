@@ -130,6 +130,7 @@ class State:
     def __init__(self, snakes, candies):
         self.snakes = snakes
         self.candies = dict((c.position, c.value) for c in candies)
+        self.scores = {}
         self.iter = 0
 
     def __str__(self):
@@ -241,13 +242,18 @@ class State:
                     or not utils.isOnGrid(self.snakes[id].position[0], self.grid_size)):
                 deads.append(id)
 
-
+        # save scores and add candies
+        rank = len(self.snakes)
         for id in deads:
+            self.scores[id] = (rank, self.snakes[id].points) 
             # add candies on the snake position before last move
             for p in self.snakes[id].position:
                 self.candies[p] = CANDY_BONUS
-            # print "Snake {} died with {} points".format(id, self.snakes[id].points)
             del self.snakes[id]
+        
+        if len(self.snakes) == 1:
+            winner = self.snakes.keys()[0]
+            self.scores[winner] = (1, self.snakes[winner].points)
 
         return self
 
