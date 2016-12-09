@@ -5,7 +5,7 @@ import move
 from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
 from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, cowardCenterDepthFunction, cowardDepthFunction, \
-    greedyEvaluationFunction
+    greedyEvaluationFunction, smartCowardDfunc, survivorDfunc
 from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor1, simpleFeatureExtractor2
 from pdb import set_trace as t
 
@@ -100,11 +100,11 @@ if __name__ ==  "__main__":
 
 
     minimax_agent = MinimaxAgent(depth=lambda s,a: 2)
-    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
+    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: survivorDfunc(s, a, 2, 0.6), evalFn=greedyEvaluationFunction)
     expectimax_agent = ExpectimaxAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
     
     
-    strategies = [humanStrategy, smartGreedyStrategy]
+    strategies = [opportunistStrategy, smartGreedyStrategy, alphabeta_agent.getAction]
     controller(strategies,
         30, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
     # rlStrategy = load_rl_strategy("d-weights1.p", [opportunistStrategy], simpleFeatureExtractor1)
