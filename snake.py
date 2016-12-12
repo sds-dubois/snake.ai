@@ -1,5 +1,3 @@
-__author__ = 'The Real Seb'
-
 import numpy as np
 from collections import deque
 import utils

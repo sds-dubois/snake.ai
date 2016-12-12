@@ -55,7 +55,9 @@ if __name__ ==  "__main__":
         agent = ExpectimaxAgent(depth = PARAMS["depth"], evalFn = PARAMS["evalFn"])
         strategies.append(agent.getAction)
 
+    start = time()
     wins, points, scores, iterations = simulate(n_simul, strategies, PARAMS["grid_size"], max_iter = MAX_ITER)
+    tot_time = time() - start
 
     with open("experiments/{}.txt".format(PARAMS["filename"]), "wb") as fout:
         print >> fout, "\n\n=======Results======="
@@ -73,6 +75,7 @@ if __name__ ==  "__main__":
         print >> fout, "\nIterations per game: {:.2f} +- {:.2f}".format(np.mean(iterations), np.std(iterations))
         print >> fout, "Time out is reached {:.2f}% of the time"\
             .format(100*sum(float(x==MAX_ITER) for x in iterations)/len(iterations))
-        
+        print >> fout, "Simulations took {} sec on avg".format(tot_time / n_simul)
+
         print >> fout, "\n\nParams"
         print >> fout, "".join("\t{}: {}\n".format(k,v) for k,v in PARAMS.iteritems())
