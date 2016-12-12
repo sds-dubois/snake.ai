@@ -270,7 +270,7 @@ def projectedDistances2(state, action, id):
     features += [(('x', min(head[0], state.grid_size - head[0])), 1.), (('y', min(head[1], state.grid_size - head[1])), 1.)]
 
     if not agent.authorizedMove(action):
-        features.append([('on-tail', 1.)])
+        features.append(('on-tail', 1.))
 
     return features
 
