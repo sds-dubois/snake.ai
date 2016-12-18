@@ -1,5 +1,3 @@
-__author__ = 'TheRealSeb'
-
 import utils
 import random
 import numpy as np

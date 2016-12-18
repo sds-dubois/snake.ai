@@ -15,7 +15,7 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
     clock = pygame.time.Clock()
     if gui_active:    
         gui_options = gui.Options()
-        win = gui.Window(grid_size,'Multiplayer Snake',gui_options)
+        win = gui.Window(grid_size,'Multiplayer Snake', gui_options)
         quit_game = False
     
     # Start Game

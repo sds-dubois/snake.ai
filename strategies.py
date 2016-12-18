@@ -77,7 +77,7 @@ def opportunistStrategy(id, state):
 
 
 def humanStrategy():
-    chibre = True
+    return
 
 def roundStrategy(id, state):
     i = state.iter

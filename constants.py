@@ -1,5 +1,3 @@
-__author__ = 'The Real Seb'
-
 from move import Move
 
 # global variables
