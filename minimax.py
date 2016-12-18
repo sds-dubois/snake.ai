@@ -37,27 +37,49 @@ def greedyEvaluationFunction(state, agent):
 
 def cowardDepthFunction(state, mm_agent, radius):
     if mm_agent not in state.snakes.iterkeys():
-        return 0
+        return 0, None
     head = state.snakes[mm_agent].head()
     if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
-        return 2
-    return 0
+        return 2, None
+    return 0, None
+
+def smartCowardDfunc(state, mm_agent, radius):
+    if mm_agent not in state.snakes.iterkeys():
+        return 0, None
+    head = state.snakes[mm_agent].head()
+    dangerous_snakes = [a for a,s in state.snakes.iteritems()
+                        if utils.dist(head, s.head()) <=  radius]
+    if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
+        return 3, dangerous_snakes
+    return 2, dangerous_snakes
+
+def survivorDfunc(state, mm_agent, radius=2, compactness=0.6):
+    if mm_agent not in state.snakes.iterkeys():
+        return 0, None
+    head = state.snakes[mm_agent].head()
+    dangerous_snakes = [a for a,s in state.snakes.iteritems()
+                        if utils.dist(head, s.head()) <=  radius]
+    if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
+        return 3, dangerous_snakes
+    if state.snakes[mm_agent].compactRate(radius) > compactness:
+        return 5, dangerous_snakes
+    return 1, dangerous_snakes
 
 def cowardCenterDepthFunction(state, mm_agent, radius):
     if mm_agent not in state.snakes.iterkeys():
-        return 0
+        return 0, None
     head = state.snakes[mm_agent].head()
     grid_size = state.snakes[mm_agent].grid_size
     if min(head[0], head[1]) <= radius-1 or max(head[0], head[1]) >= grid_size-radius:
-        return 2
+        return 2, None
     if any(s.isInArea(head, radius) for a,s in state.snakes.iteritems() if a != mm_agent):
-        return 2
-    return 0
+        return 2, None
+    return 0, None
 
-def TdEvaluationFunction(state, agent, featureExtractor,weights):
+def TdEvaluationFunction(state, agent, featureExtractor, weights):
     score = 0
-    for f, v in self.featureExtractor(state,None,agent):
-        score += self.weights[f] * v
+    for f, v in featureExtractor(state,None,agent):
+        score += weights[f] * v
     return score
 
 class MultiAgentSearchAgent(Agent):
@@ -140,8 +162,8 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             snake won, snake died, there is no more snake (draw), time is up or there are no legal moves (snake died).
 
         """
+        d, close_agents = self.depth(gameState, mm_agent)
         def vMinMax(state, depth, agent):
-
             # Edge cases
             if state.isWin(mm_agent) or state.isLose(mm_agent) or state.isDraw():
                 return state.getScore(mm_agent)
@@ -149,7 +171,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 return -float("inf")
             if len(state.actions(agent)) == 0:
                 changes = state.generateSuccessor(agent, None)
-                v = vMinMax(state, depth, state.getNextAgent(agent))
+                v = vMinMax(state, depth, state.getNextAgent(agent, close_agents))
                 state.reverseChanges(changes)
                 return v
             if depth <= 1 and agent == mm_agent:
@@ -160,14 +182,14 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             if agent == mm_agent:
                 for action in state.actions(agent):
                     changes = state.generateSuccessor(agent, action)
-                    M = max(M, vMinMax(state, depth-1, state.getNextAgent(agent)))
+                    M = max(M, vMinMax(state, depth-1, state.getNextAgent(agent, close_agents)))
                     state.reverseChanges(changes)
                 return M
             # Mean case
             avg = 0.
             for action in state.actions(agent):
                 changes = state.generateSuccessor(agent, action)
-                avg += vMinMax(state, depth, state.getNextAgent(agent))
+                avg += vMinMax(state, depth, state.getNextAgent(agent, close_agents))
                 state.reverseChanges(changes)
             return float(avg)/len(state.actions(agent))
 
@@ -177,7 +199,8 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
         for action in gameState.actions(mm_agent):
             changes = gameState.generateSuccessor(mm_agent, action)
-            v.append((vMinMax(gameState,self.depth(gameState, mm_agent), gameState.getNextAgent(mm_agent)), action))
+            v.append((vMinMax(gameState, d,
+                              gameState.getNextAgent(mm_agent, close_agents)), action))
             gameState.reverseChanges(changes)
         v_max = max(v)[0]
         return random.sample([a for d, a in v if d == v_max], 1)[0]
@@ -188,12 +211,13 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Your minimax agent with alpha-beta pruning
     """
 
-    def getAction(self, mm_agent, gameState):
+    def getAction(self, mm_agent, gameState, verbose=0):
         """
             Returns the minimax action using self.depth and self.evaluationFunction
         """
-
-        # BEGIN_YOUR_CODE (our solution is 49 lines of code, but don't worry if you deviate from this)
+        d, close_agents = self.depth(gameState, mm_agent)
+        if verbose == 1:
+            print d, close_agents
         def vMinMax(state, depth, agent, alpha, beta):
             if state.isWin(mm_agent) or state.isLose(mm_agent) or state.isDraw():
                 return state.getScore(mm_agent), None
@@ -201,7 +225,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 return -float("inf"), None
             if len(state.actions(agent)) == 0:
                 changes = state.generateSuccessor(agent, None)
-                v = vMinMax(state, depth, state.getNextAgent(agent), alpha, beta)
+                v = vMinMax(state, depth, state.getNextAgent(agent, close_agents), alpha, beta)
                 state.reverseChanges(changes)
                 return v
             if depth == 0:
@@ -210,7 +234,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 v = (-float("inf"),None)
                 for action in state.actions(agent):
                     changes = state.generateSuccessor(agent, action)
-                    vs = vMinMax(state, depth-1, state.getNextAgent(agent), alpha, beta)
+                    vs = vMinMax(state, depth-1, state.getNextAgent(agent, close_agents), alpha, beta)
                     state.reverseChanges(changes)
                     if (vs[0] > v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
                         v = (vs[0],action)
@@ -222,7 +246,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             v = (float("inf"), None)
             for action in state.actions(agent):
                 changes = state.generateSuccessor(agent, action)
-                vs = vMinMax(state,depth, state.getNextAgent(agent), alpha, beta)
+                vs = vMinMax(state, depth, state.getNextAgent(agent, close_agents), alpha, beta)
                 state.reverseChanges(changes)
                 if (vs[0] < v[0]) or (vs[0] == v[0] and bool(random.getrandbits(1))):
                     v = vs
@@ -231,7 +255,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     break
             return v
 
-        if self.depth(gameState, mm_agent) <= 0:
+        # If the depth is 0, then we just apply the heuristic without looking at other snakes
+        if self.depth(gameState, mm_agent)[0] <= 0:
             M = [(-float("inf"), None)]
             for action in gameState.actions(mm_agent):
                 changes = gameState.generateSuccessor(mm_agent, action)
@@ -245,19 +270,30 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
         v = []
         beta = float("inf")
-        agent = gameState.getNextAgent(mm_agent)
-        while(len(gameState.actions(agent)) == 0 and agent != mm_agent):
-            agent = gameState.getNextAgent(agent)
 
+        # If an agent can't move, it is going to die anyway, we then pass it
+        agent = gameState.getNextAgent(mm_agent, close_agents)
+        while(len(gameState.actions(agent)) == 0 and agent != mm_agent):
+            agent = gameState.getNextAgent(agent, close_agents)
+
+        # If the only agent present is the minimax, we compute the best action it can do
         if agent == mm_agent:
             if len(gameState.actions(mm_agent)) == 0:
                 return None
-            return random.sample(gameState.actions(mm_agent), 1)[0]
+            alpha = -float("inf")
+            for action in gameState.actions(agent):
+                changes = gameState.generateSuccessor(agent, action)
+                new_v, _ = vMinMax(gameState, d, gameState.getNextAgent(agent, close_agents), alpha, beta)
+                gameState.reverseChanges(changes)
+                v.append((new_v, action))
+                alpha = max(alpha, new_v)
+            v_max = max(v)[0]
+            return random.sample([a for d, a in v if d == v_max and a is not None], 1)[0]
 
+        # In the last case, for the worst action of all the present agents, we take the best action for minimax
         for action in gameState.actions(agent):
             changes = gameState.generateSuccessor(agent, action)
-            new_v, best_action = vMinMax(gameState, self.depth(gameState, mm_agent),
-                                                                     gameState.getNextAgent(agent), -float("inf"), beta)
+            new_v, best_action = vMinMax(gameState, d, gameState.getNextAgent(agent, close_agents), -float("inf"), beta)
             gameState.reverseChanges(changes)
             beta = min(beta, new_v)
             v.append((new_v, best_action))

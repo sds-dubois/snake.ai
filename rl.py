@@ -257,6 +257,40 @@ def projectedDistances(state, action, id):
     features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
     return features
 
+def projectedDistances2(state, action, id):
+    if action is None:
+        return [('trapped', 1.)]
+    
+    if not state.snakes[id].authorizedMove(action):
+        features.append(('on-tail', 1.))
+
+    agent = deepcopy(state.snakes[id])
+    agent.move(action)
+    head = agent.head()
+    features = [(('candy', v, utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
+    features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 12]
+    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1)), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < 12]
+    features += [(('x', min(head[0], state.grid_size - head[0])), 1.), (('y', min(head[1], state.grid_size - head[1])), 1.)]
+
+    return features
+
+def projectedDistances3(state, action, id):
+    if action is None:
+        return [('trapped', 1.)]
+    
+    if not state.snakes[id].authorizedMove(action):
+        features.append(('on-tail', 1.))
+
+    radius = 16
+    agent = deepcopy(state.snakes[id])
+    agent.move(action)
+    head = agent.head()
+    features = [(('candy', v, utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < radius]
+    features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < radius]
+    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1)), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < radius]
+    features += [(('x', min(head[0], state.grid_size - head[0])), 1.), (('y', min(head[1], state.grid_size - head[1])), 1.)]
+
+    return features
 
 ############################################################
 

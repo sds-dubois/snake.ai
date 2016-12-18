@@ -250,10 +250,14 @@ class State:
     def timesUp(self):
         return self.iter == self.max_iter
 
-    def getNextAgent(self, agent):
+    def getNextAgent(self, agent, agents=None):
+        if agents is None:
+            agents = self.snakes.keys()
+        else:
+            agents = set(agents).intersection(set(self.snakes.iterkeys()))
         for i in range(1,self.n_snakes+1):
             next_snake = (agent+i) % self.n_snakes
-            if next_snake in self.snakes.iterkeys():
+            if next_snake in agents:
                 return next_snake
         return agent
 

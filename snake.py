@@ -1,5 +1,3 @@
-__author__ = 'The Real Seb'
-
 import numpy as np
 from collections import deque
 import utils
@@ -61,6 +59,16 @@ class newSnake:
                 if self.onSnake((i,j)):
                     return True
         return False
+
+    def compactRate(self, radius):
+        pos = self.head()
+        num = 0
+        for i in xrange(max(-radius+pos[0],0), min(radius+pos[0]+1, self.grid_size)):
+            for j in xrange(max(-radius+pos[1],0), min(radius+pos[1]+1, self.grid_size)):
+                if self.bool_pos[(i,j)]:
+                    num += 1
+        return float(num)/((2*radius+1)**2 - 1)
+
 
     def authorizedMove(self, move, possibleNorm=NORM_MOVES):
         '''
