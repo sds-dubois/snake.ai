@@ -2,11 +2,13 @@
 Reinforcement learning
 """
 
-import random, math, pickle
+import random, math, pickle, time
 import interface, utils
+import numpy as np
 from collections import defaultdict
 from utils import progressBar
 from copy import deepcopy
+from sklearn.neural_network import MLPRegressor
 
 EXPLORATIONPROB = 0.3
 
@@ -14,7 +16,7 @@ class QLearningAlgorithm:
     def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, weights = None):
         self.actions = actions
         self.discount = discount
-        self.featureExtractor = featureExtractor
+        self.featureExtractor = featureExtractor.dictExtractor
         self.explorationProb = explorationProb
         self.numIters = 0
         
@@ -113,7 +115,7 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
     def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, lambda_ = 0.2, weights = None):
         self.actions = actions
         self.discount = discount
-        self.featureExtractor = featureExtractor
+        self.featureExtractor = featureExtractor.dictExtractor
         self.explorationProb = explorationProb
         self.numIters = 0
         self.lambda_ = lambda_
@@ -211,101 +213,146 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
         print "Average reward:", sum(totalRewards)/num_trials
         return totalRewards
 
+
+class nnQLearningAlgorithm(QLearningAlgorithm):
+    def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, init_weights = "simple.p", filename = None):
+        self.actions = actions
+        self.discount = discount
+        # self.featureExtractor = featureExtractor.arrayExtractor
+        self.featureExtractor = featureExtractor
+        self.explorationProb = explorationProb
+        self.sparse = False
+        self.print_time = False
+
+        self.cache_size = 30
+        self._reset_cache()
+
+        self.time_feat = []
+        self.time_pred = []
+        self.time_fit = []
+
+        # TODO
+        if filename:
+            with open("data/" + filename, "rb") as fin:
+                self.mlp = pickle.load(fin)
+            self.numIters = 101 # skip init
+        else:
+            self.numIters = 0
+            self.alg_init = QLearningAlgorithm(actions, discount, featureExtractor, explorationProb, init_weights)
+            
+            self.mlp = MLPRegressor(
+                hidden_layer_sizes = (10,),
+                activation = "relu",
+                solver = "adam",
+                max_iter = 500, #  TODO
+                # warm_start TODO
+                early_stopping = False,
+                verbose = False
+            )
+
+
+    def _reset_cache(self):
+        self.cache = 0
+        self.x_cache = []
+        self.y_cache= []
+
+    def _x_cache(self):
+        if self.sparse:
+            return self.featureExtractor.sparseMatrixExtractor(self.x_cache)
+        else:
+            return self.x_cache
+
+    def evalQ(self, state, action):
+        """
+        Evaluate Q-function for a given (`state`, `action`)
+        """
+        if self.numIters < 101:
+            return self.alg_init.evalQ(state, action)
+
+        if self.sparse:
+            return self.mlp.predict(self.featureExtractor.sparseExtractor(self.featureExtractor.dictExtractor(state,action)))[0]
+        else:
+            return self.mlp.predict([self.featureExtractor.arrayExtractor(state, action)])[0]
+
+
+    def getAction(self, state):
+        """
+        The strategy implemented by this algorithm.
+        With probability `explorationProb` take a random action.
+        """
+        self.numIters += 1
+        if len(self.actions(state)) == 0:
+            return None
+        
+        if random.random() < self.explorationProb or self.numIters < 102:
+            return random.choice(self.actions(state))
+        else:
+            return max((self.evalQ(state, action), action) for action in self.actions(state))[1]
+
+    def incorporateFeedback(self, state, action, reward, newState):
+        if newState is None:
+            return
+        
+        t0 = time.time()
+        if self.sparse:
+            phi = self.featureExtractor.dictExtractor(state, action)
+        else:
+            phi = self.featureExtractor.arrayExtractor(state,action)
+        t1 = time.time()
+        self.time_feat.append(t1-t0)
+
+        if self.numIters < 101:
+            pred = self.evalQ(state, action)
+        else:       
+            if self.sparse:
+                pred = self.mlp.predict(self.featureExtractor.sparseExtractor(phi))[0]
+            else:
+                pred = self.mlp.predict([phi])[0]
+            t2 = time.time()
+            self.time_pred.append(t2-t1)
+
+        try:
+            v_opt = max(self.evalQ(newState, new_a) for new_a in self.actions(newState))
+        except:
+            v_opt = 0.
+        target = reward + self.discount * v_opt
+
+        self.x_cache.append(phi)
+        self.y_cache.append(target)
+        self.cache += 1
+
+        if self.numIters == 100:
+            self.mlp.fit(self._x_cache(), self.y_cache)
+            self._reset_cache()
+
+        elif self.numIters > 100 and self.cache == self.cache_size:
+            t3 = time.time()
+            self.mlp.partial_fit(self._x_cache(), self.y_cache)
+            t4 = time.time()
+            self.time_fit.append(t4-t3)
+            self._reset_cache()
+
+        if self.numIters % 3000 == 0 and self.print_time:
+            print "{:.2f}\t{:.2f}\t{:.2f}".format(1000. * np.mean(self.time_feat), 1000. * np.mean(self.time_pred), 1000. * np.mean(self.time_fit))
+
+
+
+
 ############################################################
 
-def simpleFeatureExtractor1(state, action, id):
-    if action is None:
-        dir_ = None
-        norm_ = None
-    else:
-        dir_ = action.direction()
-        norm_ = action.norm()
-
-    head = state.snakes[id].position[0]
-    features = [(('candy', utils.add(head, c, mu = -1), dir_, norm_), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
-    features += [(('adv', utils.add(head, t, mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 12]
-    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1), dir_, norm_), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < 12]
-    features += [(('x', head[0], dir_, norm_), 1.), (('y', head[1], dir_, norm_), 1.)]
-    return features
-
-def simpleFeatureExtractor2(state, action, id):
-    if action is None:
-        dir_ = None
-        norm_ = None
-    else:
-        dir_ = action.direction()
-        norm_ = action.norm()
-
-    head = state.snakes[id].position[0]
-    features = [(('candy', utils.add(head, c, mu = -1), dir_, norm_), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
-    features += [(('adv-head', utils.add(head, s.position[0], mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() if k != id and utils.dist(head, s.position[0]) < 12]
-    features += [(('adv-tail', utils.add(head, s.position[i], mu = -1), dir_, norm_), 1.) for k,s in state.snakes.iteritems() for i in xrange(1, len(s.position)) if k != id and utils.dist(head, s.position[i]) < 12]
-    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1), dir_, norm_), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < 12]
-    features += [(('x', head[0], dir_, norm_), 1.), (('y', head[1], dir_, norm_), 1.)]
-    return features
-
-def projectedDistances(state, action, id):
-    if action is None:
-        return [('trapped', 1.)]
-    
-    agent = deepcopy(state.snakes[id])
-    agent.move(action)
-    head = agent.position[0]
-    features = [(('candy', utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
-    features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 12]
-    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1)), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < 12]
-    features += [(('x', head[0]), 1.), (('y', head[1]), 1.)]
-    return features
-
-def projectedDistances2(state, action, id):
-    if action is None:
-        return [('trapped', 1.)]
-    
-    if not state.snakes[id].authorizedMove(action):
-        features.append(('on-tail', 1.))
-
-    agent = deepcopy(state.snakes[id])
-    agent.move(action)
-    head = agent.head()
-    features = [(('candy', v, utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < 12]
-    features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < 12]
-    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1)), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < 12]
-    features += [(('x', min(head[0], state.grid_size - head[0])), 1.), (('y', min(head[1], state.grid_size - head[1])), 1.)]
-
-    return features
-
-def projectedDistances3(state, action, id):
-    if action is None:
-        return [('trapped', 1.)]
-    
-    if not state.snakes[id].authorizedMove(action):
-        features.append(('on-tail', 1.))
-
-    radius = 16
-    agent = deepcopy(state.snakes[id])
-    agent.move(action)
-    head = agent.head()
-    features = [(('candy', v, utils.add(head, c, mu = -1)), 1.) for c,v in state.candies.iteritems() if utils.dist(head, c) < radius]
-    features += [(('adv', utils.add(head, t, mu = -1)), 1.) for k,s in state.snakes.iteritems() for t in s.position if k != id and utils.dist(head, t) < radius]
-    features += [(('my-tail', utils.add(head, state.snakes[id].position[i], mu = -1)), 1.) for i in xrange(1, len(state.snakes[id].position)) if utils.dist(head, state.snakes[id].position[i]) < radius]
-    features += [(('x', min(head[0], state.grid_size - head[0])), 1.), (('y', min(head[1], state.grid_size - head[1])), 1.)]
-
-    return features
-
-############################################################
-
-
-
-def rl_strategy(strategies, featureExtractor, discount, grid_size, lambda_ = None, num_trials = 100, max_iter=1000, filename = "weights.p", verbose = False):
+def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "linear", lambda_ = None, num_trials = 100, max_iter=1000, filename = "weights.p", verbose = False):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
-    features = lambda s,a : featureExtractor(s, a, rl_id)
 
     if lambda_:
-        rl = QLambdaLearningAlgorithm(actions, discount = discount, featureExtractor = features, lambda_ = lambda_, explorationProb = EXPLORATIONPROB)
+        if q_type != "linear":
+            print "Warning, linear model with eligibility traces instead of", q_type
+        rl = QLambdaLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, lambda_ = lambda_, explorationProb = EXPLORATIONPROB)
+    elif q_type == "nn":
+        rl = nnQLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = EXPLORATIONPROB, init_weights = "simple.p")
     else:
-        rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = features, explorationProb = EXPLORATIONPROB)
-    
+        rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = EXPLORATIONPROB)
+
     rl.train(strategies, grid_size, num_trials=num_trials, max_iter=max_iter, verbose=verbose)
     rl.explorationProb = 0
     if lambda_ is None:
@@ -313,14 +360,20 @@ def rl_strategy(strategies, featureExtractor, discount, grid_size, lambda_ = Non
     else:
         strategy = lambda id,s : rl.getAction(s)[0]
 
+
     # save learned weights
+    if q_type == "nn":
+        filename = "nn-" + filename
     with open("data/" + filename, "wb") as fout:
-        weights = dict(rl.weights)
-        pickle.dump(weights, fout)
+        if q_type == "nn":
+            pickle.dump(rl.mlp, fout)
+        else:
+            weights = dict(rl.weights)
+            pickle.dump(weights, fout)
     
     with open("info/{}txt".format(filename[:-1]), "wb") as fout:
         print >> fout, "strategies: ", [s.__name__ for s in strategies]
-        print >> fout, "features: ", featureExtractor.__name__
+        print >> fout, "feature radius: ", featureExtractor.radius
         print >> fout, "grid: {}, lambda: {}, trials: {}, max_iter: {}".format(grid_size, lambda_, num_trials, max_iter)
         print >> fout, "discount: {}, explorationProb: {}".format(discount, EXPLORATIONPROB)
     
@@ -329,7 +382,6 @@ def rl_strategy(strategies, featureExtractor, discount, grid_size, lambda_ = Non
 def load_rl_strategy(filename, strategies, featureExtractor, discount):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
-    features = lambda s,a : featureExtractor(s, a, rl_id)
-    rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = features, explorationProb = 0, weights = filename)
+    rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = 0, weights = filename)
     strategy = lambda id,s : rl.getAction(s)
     return strategy
