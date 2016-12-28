@@ -243,7 +243,7 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
             self.mlp = MLPRegressor(
                 hidden_layer_sizes = (10,),
                 activation = "relu",
-                solver = "adam",
+                solver = "sgd",
                 max_iter = 500, #  TODO
                 # warm_start TODO
                 early_stopping = False,
@@ -340,7 +340,7 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
 
 ############################################################
 
-def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "linear", lambda_ = None, num_trials = 100, max_iter=1000, filename = "weights.p", verbose = False):
+def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "linear", lambda_ = None, num_trials = 100, max_iter = 1000, filename = "weights.p", verbose = False):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
 
@@ -362,8 +362,6 @@ def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "lin
 
 
     # save learned weights
-    if q_type == "nn":
-        filename = "nn-" + filename
     with open("data/" + filename, "wb") as fout:
         if q_type == "nn":
             pickle.dump(rl.mlp, fout)
@@ -379,9 +377,12 @@ def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "lin
     
     return strategy
 
-def load_rl_strategy(filename, strategies, featureExtractor, discount):
+def load_rl_strategy(filename, strategies, featureExtractor, discount, q_type = "linear"):
     rl_id = len(strategies)
     actions = lambda s : s.simple_actions(rl_id)
-    rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = 0, weights = filename)
+    if q_type == "nn":
+        rl = nnQLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = 0, filename = filename)
+    else: # q_type == "linear"
+        rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = 0, weights = filename)
     strategy = lambda id,s : rl.getAction(s)
     return strategy

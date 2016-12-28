@@ -48,7 +48,7 @@ if __name__ ==  "__main__":
         featureExtractor = FeatureExtractor(len(config.opponents), config.grid_size, radius_ = config.radius)
         if len(sys.argv) > 2 and sys.argv[2] == "load":
             print "Loading weights.."
-            rlStrategy = load_rl_strategy(config.filename + ".p", config.opponents, featureExtractor, config.discount)
+            rlStrategy = load_rl_strategy(config.filename + ".p", config.opponents, featureExtractor, config.discount, q_type = config.rl_type)
         else:
             rlStrategy = rl_strategy(config.opponents, featureExtractor, config.discount, config.grid_size, q_type = config.rl_type, lambda_ = config.lambda_, num_trials = config.num_trials, max_iter = config.max_iter, filename = config.filename + ".p")
         strategies.append(rlStrategy)
@@ -63,7 +63,7 @@ if __name__ ==  "__main__":
     wins, points, scores, iterations = simulate(n_simul, strategies, config.grid_size, max_iter = MAX_ITER)
     tot_time = time() - start
 
-    with open("experiments/{}.txt".format(config.filename), "wb") as fout:
+    with open("experiments/{}_{}_{}.txt".format(config.filename, "-".join([s.__name__ for s in strategies]).replace("<lambda>", "rl"), config.comment), "wb") as fout:
         print >> fout, "\n\n=======Results======="
         print >> fout, "Run {} simulations".format(n_simul)
         print >> fout, "Max iteration:", MAX_ITER, "\n"
