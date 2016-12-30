@@ -13,6 +13,7 @@ class FeatureExtractor:
         self.id = id_
         self.grid_size = grid_size
         self.radius = radius_
+        self.rotate = True
 
         tiles = self.radius**2 + (self.radius - 1)**2
         self.prefix = {
@@ -34,6 +35,11 @@ class FeatureExtractor:
                     self.index[(x,y)] = i
                     i += 1
                 
+    def relativePos(self, ref, p, orientation):
+        if self.rotate:
+            return utils.rotate(utils.add(ref, p, mu = -1), orientation)
+        else:
+            return utils.add(ref, p, mu = -1)
 
     def dictExtractor(self, state, action):
         if action is None:
@@ -50,24 +56,28 @@ class FeatureExtractor:
             agent.move(action)
 
         head = agent.head()
+        dir_ = agent.orientation()
+        def relPos(p):
+            return self.relativePos(head, p, dir_)
+
         features = [
-            (('candy', v, utils.add(head, c, mu = -1)), 1.) 
+            (('candy', v, relPos(c)), 1.) 
                 for c,v in state.candies.iteritems() 
                 if utils.dist(head, c) < self.radius
         ]
         features += [
-            (('adv-head', utils.add(head, s.head(), mu = -1)), 1.) 
+            (('adv-head', relPos(s.head())), 1.) 
                 for k,s in state.snakes.iteritems() 
                 if k != self.id and utils.dist(head, s.head()) < self.radius
         ]
         features += [
-            (('adv-tail', utils.add(head, s.position[i], mu = -1)), 1.) 
+            (('adv-tail', relPos(s.position[i])), 1.) 
                 for k,s in state.snakes.iteritems() 
                 for i in xrange(1, len(s.position)) 
                 if k != self.id and utils.dist(head, s.position[i]) < self.radius
         ]
         features += [
-            (('my-tail', utils.add(head, state.snakes[self.id].position[i], mu = -1)), 1.) 
+            (('my-tail', relPos(state.snakes[self.id].position[i])), 1.) 
                 for i in xrange(1, len(state.snakes[self.id].position)) 
                 if utils.dist(head, state.snakes[self.id].position[i]) < self.radius
         ]

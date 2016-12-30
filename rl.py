@@ -241,10 +241,10 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
             self.alg_init = QLearningAlgorithm(actions, discount, featureExtractor, explorationProb, init_weights)
             
             self.mlp = MLPRegressor(
-                hidden_layer_sizes = (10,),
+                hidden_layer_sizes = (20,),
                 activation = "relu",
-                solver = "sgd",
-                max_iter = 500, #  TODO
+                solver = "adam",
+                max_iter = 700, #  TODO
                 # warm_start TODO
                 early_stopping = False,
                 verbose = False
