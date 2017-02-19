@@ -6,7 +6,8 @@ from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
 from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, cowardCenterDepthFunction, cowardDepthFunction, \
     greedyEvaluationFunction, smartCowardDfunc, survivorDfunc
-from rl import rl_strategy, load_rl_strategy, simpleFeatureExtractor1, simpleFeatureExtractor2, projectedDistances, projectedDistances2, projectedDistances3
+from rl import rl_strategy, load_rl_strategy
+from features import FeatureExtractor
 from pdb import set_trace as t
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 0, gui_active = False, game_speed = None):
@@ -100,7 +101,7 @@ if __name__ ==  "__main__":
 
 
     minimax_agent = MinimaxAgent(depth=lambda s,a: 2)
-    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: survivorDfunc(s, a, 2, 0.5), evalFn=greedyEvaluationFunction)
+    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: survivorDfunc(s, a, 4, 0.5), evalFn=greedyEvaluationFunction)
     expectimax_agent = ExpectimaxAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
     
     strategies = [smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
@@ -109,7 +110,8 @@ if __name__ ==  "__main__":
     # strategies = [humanStrategy, smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
 
     # add an RL agent
-    # rlStrategy = load_rl_strategy("rl4-g20-pd3-2b.p", strategies, projectedDistances3, discount = 0.9)
-    # strategies.append(rlStrategy)
+    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = 10)
+    rlStrategy = load_rl_strategy("nn-nn1-r10-1b.p", strategies, featureExtractor, discount = 0.9, q_type = "nn")
+    strategies.append(rlStrategy)
 
-    controller(strategies, 30, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)
+    controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)

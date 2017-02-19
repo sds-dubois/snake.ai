@@ -21,6 +21,17 @@ def norm1(tuple):
     """Norm 1"""
     return dist(tuple, tuple)
 
+def rotate(tuple, dir):
+    """Rotate relative position `tuple`"""
+    if dir == (0,-1):
+        return mult(tuple, -1)
+    elif dir == (1,0):
+        return (-tuple[1], tuple[0])
+    elif dir == (-1,0):
+        return (tuple[1], - tuple[0])
+    else:
+        return tuple
+
 def isOnGrid(p, grid_size):
     """
     Check if position `p` is valid for the grid.
