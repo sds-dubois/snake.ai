@@ -18,7 +18,7 @@ these files).
 
 ## The config file
 In the config file, the parameter `agent` determines which method is to be tested. Setting `agent == "RL"` means that an RL
-agent will be add to the list of players (defined by `opponents`). Setting `agent == "AlphaBeta"` will add a Minimax agent instead
+agent will be added to the list of players (defined by `opponents`). Setting `agent == "AlphaBeta"` will add a Minimax agent instead
 with depth and evaluation functions set in the config file. It is also possible to let the RL agent play against a Minimax agent by
 adding (for example)
 ```

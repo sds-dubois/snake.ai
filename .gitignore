@@ -1,0 +1,11 @@
+# Ignore pyc and text files
+*.pyc
+*.txt
+
+# Ignore all log files
+/log/*
+/info/*
+!/info/.keep
+/experiments/*
+!/experiments/.keep
+
