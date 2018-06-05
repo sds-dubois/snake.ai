@@ -7,6 +7,7 @@ from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, oppo
 from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, cowardCenterDepthFunction, cowardDepthFunction, \
     greedyEvaluationFunction, smartCowardDfunc, survivorDfunc
 from rl import rl_strategy, load_rl_strategy
+from es import es_strategy, load_es_strategy
 from features import FeatureExtractor
 from pdb import set_trace as t
 
@@ -104,14 +105,16 @@ if __name__ ==  "__main__":
     alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: survivorDfunc(s, a, 4, 0.5), evalFn=greedyEvaluationFunction)
     expectimax_agent = ExpectimaxAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
     
-    strategies = [smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
+    strategies = [smartGreedyStrategy, opportunistStrategy]
+    # strategies = [smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
 
     # add a human player
     # strategies = [humanStrategy, smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
 
     # add an RL agent
-    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = 10)
-    rlStrategy = load_rl_strategy("nn-nn1-r10-1b.p", strategies, featureExtractor, discount = 0.9, q_type = "nn")
-    strategies.append(rlStrategy)
+    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = 5)
+    # rlStrategy = load_rl_strategy("nn-nn1-r10-1b.p", strategies, featureExtractor, discount = 0.9, q_type = "nn")
+    esStrategy = load_es_strategy("es-brs-r6-g20.p", strategies, featureExtractor, discount = 0.9)
+    strategies.append(esStrategy)
 
     controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)

@@ -35,6 +35,9 @@ class FeatureExtractor:
                     self.index[(x,y)] = i
                     i += 1
                 
+    def n_features(self):
+        return self.prefix["tot"]
+    
     def relativePos(self, ref, p, orientation):
         if self.rotate:
             return utils.rotate(utils.add(ref, p, mu = -1), orientation)
