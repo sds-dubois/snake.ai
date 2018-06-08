@@ -1,7 +1,8 @@
-import sys
+import sys, pickle
 import pygame
 import gui
 import move
+from hp import load_from
 from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
 from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, cowardCenterDepthFunction, cowardDepthFunction, \
@@ -110,8 +111,9 @@ if __name__ ==  "__main__":
     # strategies = [humanStrategy, smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
 
     # add an RL agent
-    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = 10)
-    rlStrategy = load_rl_strategy("nn-nn1-r10-1b.p", strategies, featureExtractor, discount = 0.9, q_type = "nn")
+    rl_hp = load_from("nn-r6-assisted.p")
+    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = rl_hp.radius)
+    rlStrategy = load_rl_strategy(rl_hp, strategies, featureExtractor)
     strategies.append(rlStrategy)
 
     controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)

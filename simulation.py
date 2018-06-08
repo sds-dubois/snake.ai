@@ -3,6 +3,7 @@ import numpy as np
 from time import sleep, time
 
 import config
+from hp import *
 from utils import progressBar
 from controller import controller
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
@@ -44,13 +45,16 @@ if __name__ ==  "__main__":
     print "Simulation config:", ["{} = {}".format(k,v) for k,v in config.__dict__.iteritems() if not k.startswith('__')]
 
     strategies = config.opponents
+    game_hp = config.game_hp
+
     if config.agent == "RL":
-        featureExtractor = FeatureExtractor(len(config.opponents), config.grid_size, radius_ = config.radius)
+        rl_hp = config.rl_hp
+        featureExtractor = FeatureExtractor(len(config.opponents), game_hp.grid_size, radius_ = rl_hp.radius)
         if len(sys.argv) > 2 and sys.argv[2] == "load":
             print "Loading weights.."
-            rlStrategy = load_rl_strategy(config.filename + ".p", config.opponents, featureExtractor, config.discount, q_type = config.rl_type)
+            rlStrategy = load_rl_strategy(load_from(config.filename + ".p"), config.opponents, featureExtractor)
         else:
-            rlStrategy = rl_strategy(config.opponents, featureExtractor, config.discount, config.grid_size, q_type = config.rl_type, lambda_ = config.lambda_, num_trials = config.num_trials, max_iter = config.max_iter, filename = config.filename + ".p")
+            rlStrategy = rl_strategy(config.opponents, featureExtractor, game_hp, rl_hp, num_trials = config.num_trials, filename = config.filename + ".p")
         strategies.append(rlStrategy)
     elif config.agent == "AlphaBeta":
         agent = AlphaBetaAgent(depth = config.depth, evalFn = config.evalFn)
@@ -60,7 +64,7 @@ if __name__ ==  "__main__":
         strategies.append(agent.getAction)
 
     start = time()
-    wins, points, scores, iterations = simulate(n_simul, strategies, config.grid_size, max_iter = MAX_ITER)
+    wins, points, scores, iterations = simulate(n_simul, strategies, game_hp.grid_size, max_iter = MAX_ITER)
     tot_time = time() - start
 
     with open("experiments/{}_{}_{}.txt".format(config.filename, "-".join([s.__name__ for s in strategies]).replace("<lambda>", "rl"), config.comment), "wb") as fout:

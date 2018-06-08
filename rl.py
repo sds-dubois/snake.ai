@@ -21,11 +21,12 @@ class QLearningAlgorithm:
         self.numIters = 0
         
         if weights:
-            with open("data/" + weights, "rb") as fin:
-                weights_ = pickle.load(fin)
-                self.weights = defaultdict(float, weights_)
+            self.weights = defaultdict(float, weights)
         else:
             self.weights = defaultdict(float)
+
+    def export_model(self):
+        return dict(self.weights)
 
     def evalQ(self, state, action):
         """
@@ -215,7 +216,7 @@ class QLambdaLearningAlgorithm(QLearningAlgorithm):
 
 
 class nnQLearningAlgorithm(QLearningAlgorithm):
-    def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, init_weights = "simple.p", filename = None):
+    def __init__(self, actions, discount, featureExtractor, explorationProb=0.2, init_weights = "simple.p", model = None):
         self.actions = actions
         self.discount = discount
         # self.featureExtractor = featureExtractor.arrayExtractor
@@ -232,13 +233,14 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
         self.time_fit = []
 
         # TODO
-        if filename:
-            with open("data/" + filename, "rb") as fin:
-                self.mlp = pickle.load(fin)
+        if model:
+            self.mlp = model
             self.numIters = 101 # skip init
         else:
             self.numIters = 0
-            self.alg_init = QLearningAlgorithm(actions, discount, featureExtractor, explorationProb, init_weights)
+            with open("data/" + init_weights, "r") as fin:
+                init_weights_ = pickle.load(fin)
+            self.alg_init = QLearningAlgorithm(actions, discount, featureExtractor, explorationProb, init_weights_)
             
             self.mlp = MLPRegressor(
                 hidden_layer_sizes = (20,),
@@ -261,6 +263,9 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
             return self.featureExtractor.sparseMatrixExtractor(self.x_cache)
         else:
             return self.x_cache
+
+    def export_model(self):
+        return self.mlp
 
     def evalQ(self, state, action):
         """
@@ -340,49 +345,54 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
 
 ############################################################
 
-def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "linear", lambda_ = None, num_trials = 100, max_iter = 1000, filename = "weights.p", verbose = False):
+# def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "linear", lambda_ = None, num_trials = 100, max_iter = 1000, filename = "weights.p", verbose = False):
+def rl_strategy(strategies, featureExtractor, game_hp, rl_hp, num_trials = 100, filename = "weights.p", verbose = False):
     rl_id = len(strategies)
-    actions = lambda s : s.simple_actions(rl_id)
 
-    if lambda_:
-        if q_type != "linear":
-            print "Warning, linear model with eligibility traces instead of", q_type
-        rl = QLambdaLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, lambda_ = lambda_, explorationProb = EXPLORATIONPROB)
-    elif q_type == "nn":
-        rl = nnQLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = EXPLORATIONPROB, init_weights = "simple.p")
+    if rl_hp.filter_actions:
+        actions = lambda s : s.simple_actions(rl_id)
     else:
-        rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = EXPLORATIONPROB)
+        actions = lambda s : s.all_actions(rl_id)
 
-    rl.train(strategies, grid_size, num_trials=num_trials, max_iter=max_iter, verbose=verbose)
+    if rl_hp.lambda_:
+        if rl_hp.q_type != "linear":
+            print "Warning, linear model with eligibility traces instead of", rl_hp.q_type
+        rl = QLambdaLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, lambda_ = rl_hp.lambda_, explorationProb = EXPLORATIONPROB)
+    elif rl_hp.q_type == "nn":
+        rl = nnQLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, explorationProb = EXPLORATIONPROB, init_weights = "simple.p")
+    else:
+        rl = QLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, explorationProb = EXPLORATIONPROB)
+
+    rl.train(strategies, game_hp.grid_size, num_trials = num_trials, max_iter = game_hp.max_iter, verbose = verbose)
     rl.explorationProb = 0
-    if lambda_ is None:
+    if rl_hp.lambda_ is None:
         strategy = lambda id,s : rl.getAction(s)
     else:
         strategy = lambda id,s : rl.getAction(s)[0]
 
 
-    # save learned weights
-    with open("data/" + filename, "wb") as fout:
-        if q_type == "nn":
-            pickle.dump(rl.mlp, fout)
-        else:
-            weights = dict(rl.weights)
-            pickle.dump(weights, fout)
+    rl_hp.save_model(rl.export_model(), filename)
     
     with open("info/{}txt".format(filename[:-1]), "wb") as fout:
         print >> fout, "strategies: ", [s.__name__ for s in strategies]
-        print >> fout, "feature radius: ", featureExtractor.radius
-        print >> fout, "grid: {}, lambda: {}, trials: {}, max_iter: {}".format(grid_size, lambda_, num_trials, max_iter)
-        print >> fout, "discount: {}, explorationProb: {}".format(discount, EXPLORATIONPROB)
+        print >> fout, "feature radius: ", rl_hp.radius
+        print >> fout, "grid: {}, lambda: {}, trials: {}, max_iter: {}".format(game_hp.grid_size, rl_hp.lambda_, num_trials, game_hp.max_iter)
+        print >> fout, "discount: {}, fiter actions: {}, explorationProb: {}".format(game_hp.discount, rl_hp.filter_actions, EXPLORATIONPROB)
     
     return strategy
 
-def load_rl_strategy(filename, strategies, featureExtractor, discount, q_type = "linear"):
+# def load_rl_strategy(filename, strategies, featureExtractor, discount, q_type = "linear"):
+def load_rl_strategy(rl_hp, strategies, featureExtractor):
     rl_id = len(strategies)
-    actions = lambda s : s.simple_actions(rl_id)
-    if q_type == "nn":
-        rl = nnQLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = 0, filename = filename)
+
+    if rl_hp.filter_actions:
+        actions = lambda s : s.simple_actions(rl_id)
+    else:
+        actions = lambda s : s.all_actions(rl_id)
+
+    if rl_hp.q_type == "nn":
+        rl = nnQLearningAlgorithm(actions, discount = None, featureExtractor = featureExtractor, explorationProb = 0, model = rl_hp.model)
     else: # q_type == "linear"
-        rl = QLearningAlgorithm(actions, discount = discount, featureExtractor = featureExtractor, explorationProb = 0, weights = filename)
+        rl = QLearningAlgorithm(actions, discount = None, featureExtractor = featureExtractor, explorationProb = 0, weights = rl_hp.model)
     strategy = lambda id,s : rl.getAction(s)
     return strategy

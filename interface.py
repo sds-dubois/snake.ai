@@ -295,6 +295,12 @@ class State:
                 and utils.isOnGrid(m.apply(head), self.grid_size)
                 and snake.authorizedMove(m, possibleNorm=[1])]
 
+    def all_actions(self, player):
+        """
+        List of all actions for `player`.
+        """
+        return [m for m in MOVES if m.norm() == 1]
+
 
 class Game:
     def __init__(self, grid_size, n_snakes = 2, candy_ratio = 1., max_iter = None):

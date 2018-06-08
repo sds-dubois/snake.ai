@@ -24,7 +24,8 @@ class FeatureExtractor:
             "my-tail" : 4 * tiles,
             "x" : 5 * tiles,
             "y" : 5 * tiles + (self.grid_size - 1)/2,
-            "tot" : 1 + 5 * tiles + 2 * int((self.grid_size - 1)/2)
+            "non-auth": 5 * tiles + 2 * int((self.grid_size - 1)/2),
+            "tot" : 1 + 1 + 5 * tiles + 2 * int((self.grid_size - 1)/2)
         }
 
         self.index = {}
@@ -44,15 +45,17 @@ class FeatureExtractor:
     def dictExtractor(self, state, action):
         if action is None:
             return [('trapped', 1.)]
-        
+
 
         if action.norm() == 1:
             agent = state.snakes[self.id]
             # pretend agent moves with action
+            authorized_move = agent.authorizedMove(action) # check before moving
             last_tail = agent.position.pop()
             agent.position.appendleft(utils.add(agent.head(), action.direction()))
         else:
             agent = deepcopy(state.snakes[self.id])
+            authorized_move = agent.authorizedMove(action) # check before moving
             agent.move(action)
 
         head = agent.head()
@@ -86,6 +89,9 @@ class FeatureExtractor:
             (('y', min(head[1], state.grid_size - 1 - head[1])), 1.)
         ]
 
+        if not authorized_move:
+            features += [("non-auth", 1.)]
+
         # revert changes
         if action.norm() == 1:
             agent.position.popleft()
@@ -101,6 +107,8 @@ class FeatureExtractor:
         for f,v in features:
             if f == "trapped":
                 arrayFeatures[self.prefix["tot"] - 1] += 1.
+            elif f == "non-auth":
+                arrayFeatures[self.prefix["non-auth"]] += 1.
             elif f[0] == "candy" and f[1] == CANDY_VAL:
                 arrayFeatures[self.prefix["candy1"] + self.index[f[2]]] += 1.
             elif f[0] == "candy" and f[1] == CANDY_BONUS:
@@ -116,6 +124,8 @@ class FeatureExtractor:
     def keyToIndex(self, f):
         if f == "trapped":
             return self.prefix["tot"] - 1
+        elif f == "non-auth":
+            return self.prefix["non-auth"]
         elif f[0] == "candy" and f[1] == CANDY_VAL:
             return self.prefix["candy1"] + self.index[f[2]]
         elif f[0] == "candy" and f[1] == CANDY_BONUS:
