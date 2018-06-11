@@ -8,6 +8,7 @@ from utils import progressBar
 from controller import controller
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
 from rl import rl_strategy, load_rl_strategy
+from policy_gradients import pg_strategy, load_pg_strategy
 from features import FeatureExtractor
 from minimax import AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction
 
@@ -55,6 +56,15 @@ if __name__ ==  "__main__":
             rlStrategy = load_rl_strategy(load_from(config.filename + ".p"), config.opponents, featureExtractor)
         else:
             rlStrategy = rl_strategy(config.opponents, featureExtractor, game_hp, rl_hp, num_trials = config.num_trials, filename = config.filename + ".p")
+        strategies.append(rlStrategy)
+    elif config.agent == "PG":
+        rl_hp = config.rl_hp
+        featureExtractor = FeatureExtractor(len(config.opponents), game_hp.grid_size, radius_ = rl_hp.radius)
+        if len(sys.argv) > 2 and sys.argv[2] == "load":
+            print "Loading weights.."
+            rlStrategy = load_pg_strategy(load_from(config.filename + ".p"), config.opponents, featureExtractor)
+        else:
+            rlStrategy = pg_strategy(config.opponents, featureExtractor, game_hp, rl_hp, num_trials = config.num_trials, filename = config.filename + ".p")
         strategies.append(rlStrategy)
     elif config.agent == "AlphaBeta":
         agent = AlphaBetaAgent(depth = config.depth, evalFn = config.evalFn)

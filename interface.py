@@ -301,6 +301,12 @@ class State:
         """
         return [m for m in MOVES if m.norm() == 1]
 
+    def all_rel_actions(self, player):
+        """
+        List of all relative actions for `player` (backwards move are excluded).
+        """
+        return [m for m in MOVES if m.norm() == 1 and m.direction() != (0,-1)]
+
 
 class Game:
     def __init__(self, grid_size, n_snakes = 2, candy_ratio = 1., max_iter = None):
