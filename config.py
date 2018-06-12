@@ -2,13 +2,16 @@ from hp import *
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy
 from minimax import AlphaBetaAgent, ExpectimaxAgent, greedyEvaluationFunction, smartCowardDfunc, survivorDfunc
 
-agent             = "PG"
-filename          = "pg-linear-r6-5000"
-game_hp           = HP(grid_size = 20, max_iter = 3000, discount = 0.9)
-rl_hp             = RlHp(radius = 6, filter_actions = True, lambda_ = None, q_type = "nn")
+# agent             = "PG"
+agent             = "ES"
+# filename          = "pg-linear-r4-500"
+filename          = "es-linear-r4-50"
+game_hp           = HP(grid_size = 20, max_iter = 100, discount = 0.9)
+rl_hp             = RlHp(radius = 4, filter_actions = True, lambda_ = None, q_type = "nn")
+es_hp             = RlHp(radius = 4, filter_actions = True, lambda_ = None, q_type = "nn")
 depth             = lambda s,a : survivorDfunc(s, a , 2, 0.5)
 evalFn            = greedyEvaluationFunction
-num_trials        = 5000
+num_trials        = 50
 opponents         = [smartGreedyStrategy, opportunistStrategy]
 # opponents         = [smartGreedyStrategy, opportunistStrategy, AlphaBetaAgent(evalFn, depth).getAction]
 comment           = ""

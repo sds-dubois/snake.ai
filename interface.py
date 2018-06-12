@@ -275,6 +275,17 @@ class State:
             return -1*(self.grid_size ** 2)*CANDY_BONUS
         return self.snakes[agent].points
 
+    def currentScore(self, player):
+        """
+        Get the adjusted score for `player`: points/rank
+        """
+        s = self.scores.get(player)
+        if s is None:
+            return self.snakes[player].points / float(len(self.snakes))
+        else:
+            rank, points = s
+            return points / float(rank)
+
     def actions(self, player):
         """
         List of possible actions for `player`.

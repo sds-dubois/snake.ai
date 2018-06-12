@@ -57,7 +57,10 @@ class FeatureExtractor:
         agent = state.snakes[self.id]
         dir_ = agent.orientation()
         return utils.rotateBack(p, dir_)
-
+                
+    # def n_features(self):
+    #     return self.prefix["tot"]
+    
     def relativePos(self, ref, p, orientation):
         if self.rotate:
             return utils.rotate(utils.add(ref, p, mu = -1), orientation)

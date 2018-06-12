@@ -76,7 +76,6 @@ class QLearningAlgorithm:
         totalRewards = []  # The rewards we get on each trial
         rl_id = len(strategies)
         for trial in xrange(num_trials):
-            progressBar(trial, num_trials)
             game = interface.Game(grid_size, len(strategies) + 1, candy_ratio = 1., max_iter = max_iter)
             state = game.startState()
             totalDiscount = 1
@@ -103,6 +102,7 @@ class QLearningAlgorithm:
                 totalDiscount *= self.discount
                 state = newState
 
+            progressBar(trial, num_trials, info = "Last reward: {}".format(totalReward))
             if verbose:
                 print "Trial %d (totalReward = %s)" % (trial, totalReward)
             totalRewards.append(totalReward)
@@ -256,7 +256,7 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
     def _reset_cache(self):
         self.cache = 0
         self.x_cache = []
-        self.y_cache= []
+        self.y_cache = []
 
     def _x_cache(self):
         if self.sparse:
