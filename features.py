@@ -23,11 +23,11 @@ class FeatureExtractor:
             "adv-tail" : 3 * tiles,
             "my-tail" : 4 * tiles,
             "wall-xr" : 5 * tiles,
-            "wall-xl" : 5 * tiles + self.grid_size,
-            "wall-yt" : 5 * tiles + 2 * self.grid_size,
-            "wall-yb" : 5 * tiles + 3 * self.grid_size,
-            "non-auth": 5 * tiles + 4 * self.grid_size,
-            "tot" : 1 + 1 + 5 * tiles + 4 * self.grid_size
+            "wall-xl" : 5 * tiles + self.radius,
+            "wall-yt" : 5 * tiles + 2 * self.radius,
+            "wall-yb" : 5 * tiles + 3 * self.radius,
+            "non-auth": 5 * tiles + 4 * self.radius,
+            "tot" : 1 + 1 + 5 * tiles + 4 * self.radius
         }
         # self.prefix = {
         #     "candy1" : 0,
@@ -117,34 +117,38 @@ class FeatureExtractor:
         #     (('x', min(head[0], state.grid_size - 1 - head[0])), 1.), 
         #     (('y', min(head[1], state.grid_size - 1 - head[1])), 1.)
         # ]
+
+        wall_features = []
         if dir_ == (0,1):
-            features += [
+            wall_features += [
                 (('wall-xl', head[0]), 1.), 
                 (('wall-xr', state.grid_size - 1 - head[0]), 1.), 
                 (('wall-yt', state.grid_size - 1 - head[1]), 1.),
                 (('wall-yb', head[1]), 1.)
             ]
         elif dir_ == (0,-1):
-            features += [
+            wall_features += [
                 (('wall-xr', head[0]), 1.), 
                 (('wall-xl', state.grid_size - 1 - head[0]), 1.), 
                 (('wall-yb', state.grid_size - 1 - head[1]), 1.),
                 (('wall-yt', head[1]), 1.)
             ]
         elif dir_ == (1,0):
-            features += [
+            wall_features += [
                 (('wall-yb', head[0]), 1.), 
                 (('wall-yt', state.grid_size - 1 - head[0]), 1.), 
                 (('wall-xl', state.grid_size - 1 - head[1]), 1.),
                 (('wall-xr', head[1]), 1.)
             ]
         elif dir_ == (-1,0):
-            features += [
+            wall_features += [
                 (('wall-yt', head[0]), 1.), 
                 (('wall-yb', state.grid_size - 1 - head[0]), 1.), 
                 (('wall-xr', state.grid_size - 1 - head[1]), 1.),
                 (('wall-xl', head[1]), 1.)
             ]
+        features += [(f,v) for f,v in wall_features if abs(f[1]) < self.radius]
+
 
         if not authorized_move:
             features += [("non-auth", 1.)]

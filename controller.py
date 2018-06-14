@@ -114,15 +114,15 @@ if __name__ ==  "__main__":
     # strategies = [humanStrategy, smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
 
     # add an RL agent
-    rl_hp = load_from("pg-linear-r6-100.p")
+    rl_hp = load_from("pg-linear-r6-1000.p")
     # rl_hp = load_from("nn-r6-assisted.p")
     featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = rl_hp.radius)
     rlStrategy = load_pg_strategy(rl_hp, strategies, featureExtractor)
     # rlStrategy = load_rl_strategy(rl_hp, strategies, featureExtractor)
 
-    esStrategy = load_es_strategy("es-linear-r4-50.p", strategies, featureExtractor, discount = 0.9)
+    # esStrategy = load_es_strategy("es-linear-r4-50.p", strategies, featureExtractor, discount = 0.9)
 
-    strategies.append(esStrategy)
-    # strategies.append(rlStrategy)
+    # strategies.append(esStrategy)
+    strategies.append(rlStrategy)
 
     controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)

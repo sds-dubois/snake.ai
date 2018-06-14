@@ -156,7 +156,7 @@ def es_strategy(strategies, featureExtractor, discount, grid_size, num_trials = 
     actions = lambda s : s.all_rel_actions(es_id)
 
     # ea = EvolutionaryAlgorithm(actions, discount, featureExtractor, strategies, grid_size, max_game_iter = max_iter, sigma = 0.0001, alpha = 0.0001, mode = 1, population_size = 20, filename = None)
-    ea = EvolutionaryAlgorithm(actions, discount, featureExtractor, strategies, grid_size, max_game_iter = max_iter, sigma = 0.001, alpha = 0.001, mode = 1, population_size = 20, filename = "pg-linear-r4-500.p")
+    ea = EvolutionaryAlgorithm(actions, discount, featureExtractor, strategies, grid_size, max_game_iter = max_iter, sigma = 0.001, alpha = 0.001, mode = 1, population_size = 20, filename = "pg-linear-r6-1000.p")
     # (self, actions, discount, featureExtractor, strategies, grid_size, max_game_iter, sigma=0.1, alpha=0.1)
     ea.train(num_trials)
 
