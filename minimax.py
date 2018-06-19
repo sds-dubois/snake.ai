@@ -1,13 +1,17 @@
 import utils
 import random
 import numpy as np
+from agent import Agent
 
-class Agent(object):
+class SearchAlgorithm(object):
     """
-    An agent must define a getAction method
+    An search agent must define a getAction and getAgent method
     """
     def __init__(self, index=0):
         self.index = index
+
+    def __str__(self):
+        return "SearchAlgorithm"
 
     def getAction(self, state):
         """
@@ -15,6 +19,24 @@ class Agent(object):
         must return a move from Move (Direction and Norm)
         """
         raise NotImplementedError("getAction not implemented")
+
+    def getAgent(self):
+        """
+        Return the agent implemented by this algorithm.
+        """
+        return Agent(name = self.__str__(), strategy = (lambda i,s : self.getAction(i, s)))
+
+
+def searchAgent(category, depth = None, evalFn = None):
+    if category == "minimax":
+        return MinimaxAlgorithm(depth = depth).getAgent()
+    elif category == "expectimax":
+        return ExpectimaxAlgorithm(depth = depth, evalFn = evalFn).getAgent()
+    elif category == "alphabeta":
+        return AlphaBetaAlgorithm(depth = depth, evalFn = evalFn).getAgent()
+    else:
+        raise NotImplementedError("Agent {} not implemented".format(category))
+
 
 def simpleEvaluationFunction(state, agent):
     """
@@ -80,24 +102,24 @@ def TdEvaluationFunction(state, agent, featureExtractor, weights):
         score += weights[f] * v
     return score
 
-class MultiAgentSearchAgent(Agent):
+class MultiAgentSearchAlgorithm(SearchAlgorithm):
     """
         This class provides some common elements to all multi-agent searchers.
         Any methods defined here will be available
-        to the MinimaxAgent, AlphaBetaAgent & ExpectimaxAgent.
+        to the MinimaxAlgorithm, AlphaBetaAlgorithm & ExpectimaxAlgorithm.
     """
 
     def __init__(self, evalFn = simpleEvaluationFunction, depth = lambda s, a: 2):
         self.evaluationFunction = evalFn
         self.depth = depth
 
-class FunmaxAgent(MultiAgentSearchAgent):
+class FunmaxAlgorithm(MultiAgentSearchAlgorithm):
     """
         Minimax agent: the synchronous approach is changed into an asynchronous one
     """
 
     def __init__(self, func, evalFn = simpleEvaluationFunction, depth = lambda s, a: 2):
-        super(FunmaxAgent, self).__init__(evalFn=evalFn, depth=depth)
+        super(FunmaxAlgorithm, self).__init__(evalFn=evalFn, depth=depth)
         self.func = func
 
     def getAction(self, mm_agent, gameState):
@@ -147,12 +169,18 @@ class FunmaxAgent(MultiAgentSearchAgent):
         v_min = min(v)[0]
         return random.sample([a for d, a in v if d == v_min], 1)[0]
     
-class MinimaxAgent(FunmaxAgent):
+class MinimaxAlgorithm(FunmaxAlgorithm):
     def __init__(self, evalFn = simpleEvaluationFunction, depth = lambda s: 2):
-        super(MinimaxAgent, self).__init__(min, evalFn=evalFn, depth=depth)
+        super(MinimaxAlgorithm, self).__init__(min, evalFn=evalFn, depth=depth)
 
+    def __str__(self):
+        return "Minimax"
 
-class ExpectimaxAgent(MultiAgentSearchAgent):
+class ExpectimaxAlgorithm(MultiAgentSearchAlgorithm):
+
+    def __str__(self):
+        return "Expectimax"
+
     def getAction(self, mm_agent, gameState):
         """
             Returns the minimax action from the current gameState using self.depth
@@ -204,10 +232,13 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         return random.sample([a for d, a in v if d == v_max], 1)[0]
 
 
-class AlphaBetaAgent(MultiAgentSearchAgent):
+class AlphaBetaAlgorithm(MultiAgentSearchAlgorithm):
     """
         Your minimax agent with alpha-beta pruning
     """
+
+    def __str__(self):
+        return "AlphaBeta"
 
     def getAction(self, mm_agent, gameState, verbose=0):
         """

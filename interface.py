@@ -64,6 +64,11 @@ class State:
         s += "-" * 2*(grid_size + 1)+ '\n'
         print s
 
+    def isAlive(self, snake_id):
+        """
+        Check if snake :snake_id: is still alive.
+        """
+        return (snake_id in self.snakes)
 
     def addCandy(self, pos, val, dead_snake=-1):
         """
@@ -325,6 +330,9 @@ class Game:
         self.max_iter = max_iter
         self.n_snakes = n_snakes
         self.candy_ratio = candy_ratio
+        self.current_state = None
+        self.previous_state = None
+        self.agents = []
 
 
         # Update static variables of State
@@ -358,12 +366,32 @@ class Game:
         start_state.addNRandomCandies(candies_to_put, self.grid_size)
         return start_state
 
-    def isEnd(self, state):
+    def start(self, agents):
+        """
+        Initialize a game with a valid startState.
+        Returns the current state.
+        """
+        self.current_state = self.startState()
+        self.agents = agents
+        for i,agent in enumerate(self.agents):
+            agent.setPlayerId(i)
+
+        return self.current_state
+
+    def isEnd(self, state = None):
+        if state is None:
+            state = self.current_state
+
         if self.max_iter:
             return len(state.snakes) <= 1 or state.iter == self.max_iter
         else:
             return len(state.snakes) <= 1
 
+    def isAlive(self, agent_id):
+        return self.current_state.isAlive(agent_id)
+
+    def agentActions(self):
+        return {i: self.agents[i].nextAction(self.current_state) for i in self.current_state.snakes.keys()}
 
     def succ(self, state, actions, copy = True):
         """
@@ -374,8 +402,18 @@ class Game:
             newState = deepcopy(state)
         else:
             newState = state
+        self.previous_state = state
         newState.update(actions)
         rand_pos = (random.randint(0, self.grid_size-1), random.randint(0, self.grid_size-1))
         newState.addCandy(rand_pos, CANDY_VAL)
+        self.current_state = newState
         return newState
 
+    def agentLastReward(self, agent_id):
+        if agent_id in self.current_state.snakes:
+            reward = self.current_state.snakes[agent_id].points - self.previous_state.snakes[agent_id].points
+            if len(self.current_state.snakes) == 1: # it won
+                reward += 10.
+        else: # it died
+            reward = - 10.
+        return reward

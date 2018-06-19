@@ -39,7 +39,7 @@ class EvolutionaryAlgorithm:
             init_hp = hp.load_from(filename)
             self.weights = init_hp.model
 
-    def export_model(self):
+    def exportModel(self):
         return self.weights
 
     def _sample_candidates(self):
@@ -49,36 +49,28 @@ class EvolutionaryAlgorithm:
         return np.mean([self._evaluate(weight_candidate) for _ in xrange(n_rollouts)])
 
     def _evaluate(self, weight_candidate):
-        agent = ESAgent(self.actions, self.discount, self.featureExtractor, weights = weight_candidate)
-        agent_id = len(self.strategies)
+        agent = ESAgent(self.actions, self.discount, self.featureExtractor, weights = weight_candidate).getAgent()
 
-        game = interface.Game(self.grid_size, len(self.strategies) + 1, candy_ratio = 1., max_iter = self.max_game_iter)
-        state = game.startState()
+        agents = deepcopy(self.strategies) # add current agent to strategies
+        agents.append(agent)
+
+        game = interface.Game(grid_size, len(agents), candy_ratio = 1., max_iter = max_iter)
+        game.start(agents)
         totalDiscount = 1
         totalReward = 0
-        points = state.snakes[agent_id].points
-        while not game.isEnd(state) and agent_id in state.snakes:
-            # Compute the actions for each player following its strategy
-            actions = {i: self.strategies[i](i, state) for i in state.snakes.keys() if i != agent_id}
-            action = agent.getAction(state)
-            actions[agent_id] = action
 
-            newState = game.succ(state, actions)
-            if agent_id in newState.snakes:
-                reward = newState.snakes[agent_id].points - points
-                if len(newState.snakes) == 1: # it won
-                    reward += 10.
-                points = newState.snakes[agent_id].points
-            else: # it died
-                reward -= 10.
-                # reward = - 10.
+        while not game.isEnd() and agent.isAlive(game):
+            # Compute the actions for each player following its strategy
+            actions = game.agentActions()
+            newState = game.succ(game.current_state, actions)
+
+            reward = agent.lastReward(game)
 
             totalReward += totalDiscount * reward
             totalDiscount *= self.discount
-            state = newState
 
         # fitness = totalReward
-        fitness = state.currentScore(agent_id)
+        fitness = game.current_state.currentScore(agent_id)
         # fitness = max(0, totalReward)  # we need positive values
         return fitness
 
@@ -122,7 +114,7 @@ class ESAgent:
             self.weights = weights
         else:
             raise ValueError("ES agent initialized without weights")
-                
+
 
     def evalActions(self, state):
         """ Get the model's confidence to take each action from `state` """
@@ -146,6 +138,11 @@ class ESAgent:
         abs_action = move.Move(self.featureExtractor.toAbsolutePos(state, rel_action.direction()), norm = rel_action.norm())
         return abs_action
 
+    def getAgent(self):
+        agent = Agent(name = "ES", strategy = (lambda i,s : self.getAction(s)))
+        return agent
+        
+
 
 
 
@@ -160,27 +157,24 @@ def es_strategy(strategies, featureExtractor, discount, grid_size, num_trials = 
     # (self, actions, discount, featureExtractor, strategies, grid_size, max_game_iter, sigma=0.1, alpha=0.1)
     ea.train(num_trials)
 
-    agent = ESAgent(ea.actions, ea.discount, ea.featureExtractor, weights = ea.weights)
-    strategy = lambda id,s : agent.getAction(s)
-
+    agent = ESAgent(ea.actions, ea.discount, ea.featureExtractor, weights = ea.weights).getAgent()
 
     # save learned weights
     with open("data/" + filename, "wb") as fout:
         pickle.dump(ea.weights, fout)
     
     with open("info/{}txt".format(filename[:-1]), "wb") as fout:
-        print >> fout, "strategies: ", [s.__name__ for s in strategies]
+        print >> fout, "strategies: ", [s.__str__() for s in strategies]
         print >> fout, "feature radius: ", featureExtractor.radius
         print >> fout, "grid: {}, trials: {}, max_iter: {}".format(grid_size, num_trials, max_iter)
         print >> fout, "discount: {}".format(discount)
     
-    return strategy
+    return agent
 
 
 def load_es_strategy(filename, strategies, featureExtractor, discount):
     es_id = len(strategies)
     actions = lambda s : s.all_rel_actions(es_id)
 
-    agent = ESAgent(actions, discount, featureExtractor, weights = None, filename = filename)
-    strategy = lambda id,s : agent.getAction(s)
-    return strategy
+    agent = ESAgent(actions, discount, featureExtractor, weights = None, filename = filename).getAgent()
+    return agent

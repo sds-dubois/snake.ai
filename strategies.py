@@ -76,9 +76,6 @@ def opportunistStrategy(id, state):
     return best_move[2]
 
 
-def humanStrategy():
-    return
-
-def roundStrategy(id, state):
-    i = state.iter
+def humanStrategy(id, state):
+    return None
 

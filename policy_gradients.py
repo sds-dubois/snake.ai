@@ -5,14 +5,15 @@ Reinforcement learning via policy gradients
 import random, math, pickle, time
 import interface, move, utils
 import numpy as np
+from agent import Agent
+from rl import RLAlgorithm
 from collections import defaultdict
 from utils import progressBar
 from copy import deepcopy
 from sklearn.neural_network import MLPRegressor
 from constants import NO_MOVE
 
-
-class PolicyGradientAlgorithm:
+class PolicyGradientAlgorithm(RLAlgorithm):
 
     def __init__(self, actions, discount, featureExtractor, exploration = True, weights = None):
         self.actions = actions
@@ -20,6 +21,7 @@ class PolicyGradientAlgorithm:
         self.discount = discount
         self.featureExtractor = featureExtractor
         self.exploration = exploration
+        self.rl_type = "policy_gradients"
 
         self.verbose = False
         self.numIters = 0
@@ -37,7 +39,10 @@ class PolicyGradientAlgorithm:
             self.weights = np.random.rand(self.n_actions, self.featureExtractor.nFeatures()) / np.sqrt(self.featureExtractor.nFeatures())
             # self.weights = np.zeros((self.n_actions, self.featureExtractor.nFeatures()))
 
-    def export_model(self):
+    def __str__(self):
+        return "PolicyGradients"
+
+    def exportModel(self):
         return self.weights
 
     def stopExploration(self):
@@ -152,76 +157,3 @@ class PolicyGradientAlgorithm:
             # if rollout_idx > self.buffer_size:
             # raise("End")
 
-    def train(self, strategies, grid_size, num_trials = 100, max_iter = 1000, verbose = False):
-        print "RL training"
-        totalRewards = []  # The rewards we get on each trial
-        rl_id = len(strategies)
-        for trial in xrange(num_trials):
-            progressBar(trial, num_trials)
-            game = interface.Game(grid_size, len(strategies) + 1, candy_ratio = 1., max_iter = max_iter)
-            state = game.startState()
-            totalDiscount = 1
-            totalReward = 0
-            rewards = []
-            points = state.snakes[rl_id].points
-            while not game.isEnd(state) and rl_id in state.snakes:
-                # Compute the actions for each player following its strategy
-                actions = {i: strategies[i](i, state) for i in state.snakes.keys() if i != rl_id}
-                action = self.getAction(state)
-                actions[rl_id] = action
-
-                newState = game.succ(state, actions)
-                if rl_id in newState.snakes:
-                    reward = newState.snakes[rl_id].points - points
-                    if len(newState.snakes) == 1: # it won
-                        reward += 10.
-                    points = newState.snakes[rl_id].points
-                else: # it died
-                    reward = - 10.
-
-                rewards.append(reward)
-                totalReward += totalDiscount * reward
-                totalDiscount *= self.discount
-                state = newState
-            self.addRolloutFeedback(rewards, trial)
-
-            if verbose:
-                print "Trial %d (totalReward = %s)" % (trial, totalReward)
-            totalRewards.append(totalReward)
-
-        progressBar(num_trials, num_trials)
-        print "Average reward:", sum(totalRewards)/num_trials
-        return totalRewards
-
-
-############################################################
-
-# # def rl_strategy(strategies, featureExtractor, discount, grid_size, q_type = "linear", lambda_ = None, num_trials = 100, max_iter = 1000, filename = "weights.p", verbose = False):
-def pg_strategy(strategies, featureExtractor, game_hp, rl_hp, num_trials = 100, filename = "weights.p", verbose = False):
-    rl_id = len(strategies)
-    actions = lambda s : s.all_rel_actions(rl_id)
-
-    rl = PolicyGradientAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, exploration = True)
-    rl.train(strategies, game_hp.grid_size, num_trials = num_trials, max_iter = game_hp.max_iter, verbose = verbose)
-    rl.stopExploration()
-
-    strategy = lambda id,s : rl.getAction(s)
-
-    rl_hp.save_model(rl.export_model(), filename)
-    
-    with open("info/{}txt".format(filename[:-1]), "wb") as fout:
-        print >> fout, "strategies: ", [s.__name__ for s in strategies]
-        print >> fout, "feature radius: ", rl_hp.radius
-        print >> fout, "grid: {}, lambda: {}, trials: {}, max_iter: {}".format(game_hp.grid_size, rl_hp.lambda_, num_trials, game_hp.max_iter)
-        print >> fout, "discount: {}, fiter actions: {}".format(game_hp.discount, rl_hp.filter_actions)
-    
-    return strategy
-
-# # def load_rl_strategy(filename, strategies, featureExtractor, discount, q_type = "linear"):
-def load_pg_strategy(rl_hp, strategies, featureExtractor):
-    rl_id = len(strategies)
-    actions = lambda s : s.all_rel_actions(rl_id)
-
-    rl = PolicyGradientAlgorithm(actions, discount = None, featureExtractor = featureExtractor, exploration = False, weights = rl_hp.model)
-    strategy = lambda id,s : rl.getAction(s)
-    return strategy
