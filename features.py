@@ -29,18 +29,6 @@ class FeatureExtractor:
             "non-auth": 5 * tiles + 4 * self.radius,
             "tot" : 1 + 1 + 5 * tiles + 4 * self.radius
         }
-        # self.prefix = {
-        #     "candy1" : 0,
-        #     "candy2" : tiles,
-        #     "adv-head" : 2 * tiles,
-        #     "adv-tail" : 3 * tiles,
-        #     "my-tail" : 4 * tiles,
-        #     "x" : 5 * tiles,
-        #     "y" : 5 * tiles + (self.grid_size - 1)/2,
-        #     "non-auth": 5 * tiles + 2 * int((self.grid_size - 1)/2),
-        #     "tot" : 1 + 1 + 5 * tiles + 2 * int((self.grid_size - 1)/2)
-        # }
-
         self.index = {}
         i = 0
         for x in xrange(1-self.radius, self.radius):
@@ -58,9 +46,6 @@ class FeatureExtractor:
         dir_ = agent.orientation()
         return utils.rotateBack(p, dir_)
                 
-    # def n_features(self):
-    #     return self.prefix["tot"]
-    
     def relativePos(self, ref, p, orientation):
         if self.rotate:
             return utils.rotate(utils.add(ref, p, mu = -1), orientation)

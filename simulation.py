@@ -75,12 +75,6 @@ if __name__ ==  "__main__":
         else:
             esStrategy = es_strategy(config.opponents, featureExtractor, game_hp.discount, game_hp.grid_size, num_trials = config.num_trials, max_iter = game_hp.max_iter, filename = config.filename + ".p")
         strategies.append(esStrategy)
-    elif config.agent == "AlphaBeta":
-        agent = searchAgent("alphabeta", depth = config.depth, evalFn = config.evalFn)
-        strategies.append(agent)
-    elif config.agent == "ExpectimaxAgent":
-        agent = searchAgent("expectimax", depth = config.depth, evalFn = config.evalFn)
-        strategies.append(agent)
 
     start = time()
     wins, points, scores, iterations = simulate(n_simul, strategies, game_hp.grid_size, max_iter = MAX_ITER)

@@ -1,7 +1,6 @@
 import sys, pickle
 import pygame
-import gui
-import move
+import gui, move, config
 from hp import load_from
 from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
@@ -119,16 +118,14 @@ if __name__ ==  "__main__":
     strategies = [SmartGreedyAgent, OpportunistAgent, alphabeta_agent]
 
     # add an RL agent
-    # rl_hp = load_from("rl-pg-linear-r6-1000.p")
-    rl_hp = load_from("rl-ql-linear-r6-1000.p")
-    # rl_hp = load_from("nn-r6-assisted.p")
+    rl_hp = load_from(config.filename + ".p")
+    # rl_hp = load_from("rl-ql-linear-r6-1000.p")
     featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = rl_hp.radius)
     rlStrategy = load_rl_strategy(rl_hp, strategies, featureExtractor)
     # rlStrategy = load_rl_strategy(rl_hp, strategies, featureExtractor)
 
     # esStrategy = load_es_strategy("es-linear-r4-50.p", strategies, featureExtractor, discount = 0.9)
 
-    # strategies.append(esStrategy)
     strategies.append(rlStrategy)
 
     if human_player:
