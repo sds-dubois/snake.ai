@@ -39,7 +39,7 @@ def rl_strategy(strategies, featureExtractor, game_hp, rl_hp, num_trials = 100, 
                 print "Warning, linear model with eligibility traces instead of", rl_hp.q_type
             rl = QLambdaLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, lambda_ = rl_hp.lambda_, explorationProb = QL_EXPLORATIONPROB)
         elif rl_hp.q_type == "nn":
-            rl = nnQLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, explorationProb = QL_EXPLORATIONPROB, init_weights = "simple.p")
+            rl = nnQLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, explorationProb = QL_EXPLORATIONPROB, init_weights = "simple-ql-r6.p")
         else:
             rl = QLearningAlgorithm(actions, discount = game_hp.discount, featureExtractor = featureExtractor, explorationProb = QL_EXPLORATIONPROB)
 

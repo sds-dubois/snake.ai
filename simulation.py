@@ -106,5 +106,5 @@ if __name__ ==  "__main__":
 
         print >> fout, "\n\nParams"
         print >> fout, "\n".join(
-            ["{} = {}".format(k,v) for k,v in config.__dict__.iteritems() if not k.startswith('__')]
+            ["{} = {}".format(k, config.__dict__[k] if k != "opponents" else ", ".join([str(o) for o in config.__dict__[k]])) for k in ["agent", "filename", "game_hp", "rl_hp", "es_hp", "depth", "evalFn", "num_trials", "opponents", "comment"]]
         )

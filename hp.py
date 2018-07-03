@@ -5,6 +5,9 @@ class HP:
         self.grid_size = grid_size
         self.max_iter = max_iter
         self.discount = discount
+    
+    def __str__(self):
+        return " | ".join(["{} = {}".format(k,v) for k,v in self.__dict__.iteritems()])
 
 
 class RlHp:
@@ -16,6 +19,9 @@ class RlHp:
         self.q_type = q_type
         self.model = None
 
+    def __str__(self):
+        return " | ".join(["{} = {}".format(k,v) for k,v in self.__dict__.iteritems() if k != "model"])
+
     def save_model(self, model, filename):
         self.model = model
 
@@ -25,6 +31,9 @@ class RlHp:
 class EsHp:
     def __init__(self, radius):
         self.radius = radius
+
+    def __str__(self):
+        return " | ".join(["{} = {}".format(k,v) for k,v in self.__dict__.iteritems()])
 
     def save_model(self, model, filename):
         self.model = model
