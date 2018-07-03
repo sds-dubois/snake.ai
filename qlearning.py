@@ -95,6 +95,7 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
         self.explorationProb = explorationProb
         self.sparse = False
         self.print_time = False
+        self.rl_type = "qlearning"
 
         self.cache_size = 30
         self._reset_cache()
@@ -110,8 +111,8 @@ class nnQLearningAlgorithm(QLearningAlgorithm):
         else:
             self.numIters = 0
             with open("data/" + init_weights, "r") as fin:
-                init_weights_ = pickle.load(fin)
-            self.alg_init = QLearningAlgorithm(actions, discount, featureExtractor, explorationProb, init_weights_)
+                init_alg_ = pickle.load(fin)
+            self.alg_init = QLearningAlgorithm(actions, discount, featureExtractor, explorationProb, init_alg_.model)
             
             self.mlp = MLPRegressor(
                 hidden_layer_sizes = (20,),
