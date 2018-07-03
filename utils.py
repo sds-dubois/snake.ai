@@ -1,8 +1,14 @@
 import sys
+import numpy as np
 
 """
 Utils
 """
+
+def softmax(x):
+    """ Compute softmax values for each sets of scores in x """
+    e_x = np.exp(x - np.max(x)) # subtract max(x) for stability
+    return e_x / e_x.sum(axis = 0)
 
 def add(tuple1, tuple2, mu = 1):
     """
@@ -21,16 +27,29 @@ def norm1(tuple):
     """Norm 1"""
     return dist(tuple, tuple)
 
-def rotate(tuple, dir):
-    """Rotate relative position `tuple`"""
+def rotate(p, dir):
+    """Rotate position `p` in relative coordinates when snake has direction `dir`"""
+
     if dir == (0,-1):
-        return mult(tuple, -1)
+        return mult(p, -1)
     elif dir == (1,0):
-        return (-tuple[1], tuple[0])
+        return (-p[1], p[0])
     elif dir == (-1,0):
-        return (tuple[1], - tuple[0])
+        return (p[1], - p[0])
     else:
-        return tuple
+        return p
+
+def rotateBack(p, dir):
+    """Rotate position `p` in aboslute coordinates when snake has direction `dir`"""
+
+    if dir == (0,-1):
+        return mult(p, -1)
+    elif dir == (1,0):
+        return (p[1], - p[0])
+    elif dir == (-1,0):
+        return (- p[1], p[0])
+    else:
+        return p
 
 def isOnGrid(p, grid_size):
     """
@@ -38,11 +57,15 @@ def isOnGrid(p, grid_size):
     """
     return p[0] >= 0 and p[1] >= 0 and p[0] < grid_size and p[1] < grid_size
 
-def progressBar(iteration, n_total, size=50):
+def progressBar(iteration, n_total, size = 50, info = None):
+    size = min(size, n_total)
     if iteration % (n_total/size) == 0:
         sys.stdout.write('\r')
         i = iteration*size/n_total
-        sys.stdout.write("[<{}D-<{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
+        if info is not None:
+            sys.stdout.write("[<{}D-<{}] {}% | {}".format('='*i, ' '*(size-i), (100/size)*i, info))
+        else:
+            sys.stdout.write("[<{}D-<{}] {}%".format('='*i, ' '*(size-i), (100/size)*i))
         sys.stdout.flush()
     if iteration == n_total:
         print ""

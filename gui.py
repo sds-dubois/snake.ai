@@ -1,7 +1,12 @@
-# Manage GUI
+"""
+Manage GUI
+"""
+
 import pygame, interface
 import collections
 from pdb import set_trace as t
+
+
 class Options:
     def __init__(self):
         # Colors
@@ -17,10 +22,7 @@ class Options:
         self.total_size = self.segment_side + self.segment_margin
 
 
-
 class SegmentSprite(pygame.sprite.Sprite):
-    # -- Methods
-    # Constructor function
     def __init__(self, position,rgb_color, options):
         # Call the parent's constructor
         super(SegmentSprite,self).__init__() 
@@ -33,8 +35,6 @@ class SegmentSprite(pygame.sprite.Sprite):
         self.rect.x = position[0]
         self.rect.y = position[1]
 
-    
-        
 
 class SnakeSprite:
     def __init__(self,positions,color,options):
@@ -55,6 +55,7 @@ class SnakeSprite:
     def darken(self,rgb_color):
         mu = 0.6
         return tuple([int(c * mu) for c in rgb_color])
+
 class Window:
     def __init__(self,grid_size,title,options): 
         self.options = options       
@@ -77,7 +78,6 @@ class Window:
         for i,snake in state.snakes.items():
             color = self.options.snake_colors[i % len(self.options.snake_colors)] 
             self.all_sprites.add(SnakeSprite(self.xy2uv(snake.position),color,self.options).segments)
-        
 
     def refresh(self):
         # -- Draw everything

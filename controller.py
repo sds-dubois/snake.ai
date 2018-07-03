@@ -1,14 +1,15 @@
-import sys
+import sys, pickle
 import pygame
-import gui
-import move
+import gui, move, config
+from hp import load_from
 from interface import Game,Snake
 from strategies import randomStrategy, greedyStrategy, smartGreedyStrategy, opportunistStrategy,humanStrategy
-from minimax import MinimaxAgent, AlphaBetaAgent, ExpectimaxAgent, cowardCenterDepthFunction, cowardDepthFunction, \
-    greedyEvaluationFunction, smartCowardDfunc, survivorDfunc
-from rl import rl_strategy, load_rl_strategy
+from minimax import searchAgent, cowardCenterDepthFunction, cowardDepthFunction, greedyEvaluationFunction, smartCowardDfunc, survivorDfunc
+from rl_interface import rl_strategy, load_rl_strategy
+from es import es_strategy, load_es_strategy
 from features import FeatureExtractor
 from pdb import set_trace as t
+from constants import *
 
 def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose = 0, gui_active = False, game_speed = None):
     # Pygame Init
@@ -21,9 +22,16 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
     
     # Start Game
     game = Game(grid_size, len(strategies), candy_ratio = candy_ratio, max_iter = max_iter)
-    state = game.startState()
-    prev_action = None
+    # state = game.startState()
+    state = game.start(strategies)
+    prev_human_action = None
     game_over = False
+
+    agent_names = [a.name for a in strategies]
+    i_human = None
+    if "human" in agent_names:
+        i_human = agent_names.index("human")
+
     while not ((gui_active and quit_game) or ((not gui_active) and game_over)):
         # Print state
         if verbose > 0:
@@ -35,11 +43,13 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
                 quit_game = True 
                 continue   
 
+
+        # Compute the actions for each player following its strategy (except human)
+        actions = game.agentActions()
+
         # Compute human strategy if necessary
         human_action = None 
-        i_human = None
-        if humanStrategy in [strategies[i] for i in state.snakes.keys()]:
-            i_human = strategies.index(humanStrategy)
+        if i_human is not None:
             speed = 2. if pygame.K_SPACE in [ev.key for ev in events if ev.type == pygame.KEYDOWN] else 1.
             arrow_key = False 
             for event in events:                               
@@ -57,15 +67,15 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
                         human_action = move.Move((0,1),speed)
                         arrow_key = True      
                     
-            if not arrow_key:
-                human_action = prev_action
-        # Compute the actions for each player following its strategy (except human)
-        actions = {i: strategies[i](i, state) for i in state.snakes.keys() if i!=i_human}
+            if not arrow_key and prev_human_action is None:
+                human_action = move.Move((0,-1),speed)
+            elif not arrow_key:
+                human_action = prev_human_action
  
         # Assign human action
-        if human_action != None: 
+        if i_human is not None and i_human in actions.keys(): 
             actions[i_human] = human_action 
-            prev_action = human_action
+            prev_human_action = human_action
 
         if verbose > 1:
             print state
@@ -94,24 +104,31 @@ def controller(strategies, grid_size, candy_ratio = 1., max_iter = None, verbose
     return state
 
 if __name__ ==  "__main__":
-    if len(sys.argv) > 1:
-        max_iter = int(sys.argv[1])
-    else:
-        max_iter = None
 
+    human_player = False
+    if len(sys.argv) > 1 and sys.argv[1] == "h":
+        human_player = True
 
-    minimax_agent = MinimaxAgent(depth=lambda s,a: 2)
-    alphabeta_agent = AlphaBetaAgent(depth=lambda s,a: survivorDfunc(s, a, 4, 0.5), evalFn=greedyEvaluationFunction)
-    expectimax_agent = ExpectimaxAgent(depth=lambda s,a: cowardCenterDepthFunction(s, a, 2), evalFn=greedyEvaluationFunction)
+    max_iter = None
+    minimax_agent = searchAgent("minimax", depth = lambda s,a : 2)
+    alphabeta_agent = searchAgent("alphabeta", depth = lambda s,a : survivorDfunc(s, a, 4, 0.5), evalFn = greedyEvaluationFunction)
+    expectimax_agent = searchAgent("expectimax", depth = lambda s,a : cowardCenterDepthFunction(s, a, 2), evalFn = greedyEvaluationFunction)
     
-    strategies = [smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
-
-    # add a human player
-    # strategies = [humanStrategy, smartGreedyStrategy, opportunistStrategy, alphabeta_agent.getAction]
+    # strategies = [SmartGreedyAgent, OpportunistAgent]
+    strategies = [SmartGreedyAgent, OpportunistAgent, alphabeta_agent]
 
     # add an RL agent
-    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = 10)
-    rlStrategy = load_rl_strategy("nn-nn1-r10-1b.p", strategies, featureExtractor, discount = 0.9, q_type = "nn")
+    rl_hp = load_from(config.filename + ".p")
+    # rl_hp = load_from("rl-ql-linear-r6-1000.p")
+    featureExtractor = FeatureExtractor(len(strategies), grid_size = 20, radius_ = rl_hp.radius)
+    rlStrategy = load_rl_strategy(rl_hp, strategies, featureExtractor)
+    # rlStrategy = load_rl_strategy(rl_hp, strategies, featureExtractor)
+
+    # esStrategy = load_es_strategy("es-linear-r4-50.p", strategies, featureExtractor, discount = 0.9)
+
     strategies.append(rlStrategy)
+
+    if human_player:
+        strategies.append(HumanAgent)
 
     controller(strategies, 20, max_iter = max_iter, gui_active = True, verbose = 0, game_speed = 10)

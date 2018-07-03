@@ -22,11 +22,13 @@ class FeatureExtractor:
             "adv-head" : 2 * tiles,
             "adv-tail" : 3 * tiles,
             "my-tail" : 4 * tiles,
-            "x" : 5 * tiles,
-            "y" : 5 * tiles + (self.grid_size - 1)/2,
-            "tot" : 1 + 5 * tiles + 2 * int((self.grid_size - 1)/2)
+            "wall-xr" : 5 * tiles,
+            "wall-xl" : 5 * tiles + self.radius,
+            "wall-yt" : 5 * tiles + 2 * self.radius,
+            "wall-yb" : 5 * tiles + 3 * self.radius,
+            "non-auth": 5 * tiles + 4 * self.radius,
+            "tot" : 1 + 1 + 5 * tiles + 4 * self.radius
         }
-
         self.index = {}
         i = 0
         for x in xrange(1-self.radius, self.radius):
@@ -34,6 +36,15 @@ class FeatureExtractor:
                 if utils.dist((0,0), (x,y)) < self.radius:
                     self.index[(x,y)] = i
                     i += 1
+
+
+    def nFeatures(self):
+        return self.prefix["tot"]
+
+    def toAbsolutePos(self, state, p):
+        agent = state.snakes[self.id]
+        dir_ = agent.orientation()
+        return utils.rotateBack(p, dir_)
                 
     def relativePos(self, ref, p, orientation):
         if self.rotate:
@@ -44,16 +55,21 @@ class FeatureExtractor:
     def dictExtractor(self, state, action):
         if action is None:
             return [('trapped', 1.)]
-        
+
 
         if action.norm() == 1:
             agent = state.snakes[self.id]
             # pretend agent moves with action
+            authorized_move = agent.authorizedMove(action) # check before moving
             last_tail = agent.position.pop()
             agent.position.appendleft(utils.add(agent.head(), action.direction()))
-        else:
+        elif action.norm() > 1:
             agent = deepcopy(state.snakes[self.id])
+            authorized_move = agent.authorizedMove(action) # check before moving
             agent.move(action)
+        else:
+            agent = state.snakes[self.id]
+            authorized_move = True
 
         head = agent.head()
         dir_ = agent.orientation()
@@ -81,10 +97,46 @@ class FeatureExtractor:
                 for i in xrange(1, len(state.snakes[self.id].position)) 
                 if utils.dist(head, state.snakes[self.id].position[i]) < self.radius
         ]
-        features += [
-            (('x', min(head[0], state.grid_size - 1 - head[0])), 1.), 
-            (('y', min(head[1], state.grid_size - 1 - head[1])), 1.)
-        ]
+
+        # features += [
+        #     (('x', min(head[0], state.grid_size - 1 - head[0])), 1.), 
+        #     (('y', min(head[1], state.grid_size - 1 - head[1])), 1.)
+        # ]
+
+        wall_features = []
+        if dir_ == (0,1):
+            wall_features += [
+                (('wall-xl', head[0]), 1.), 
+                (('wall-xr', state.grid_size - 1 - head[0]), 1.), 
+                (('wall-yt', state.grid_size - 1 - head[1]), 1.),
+                (('wall-yb', head[1]), 1.)
+            ]
+        elif dir_ == (0,-1):
+            wall_features += [
+                (('wall-xr', head[0]), 1.), 
+                (('wall-xl', state.grid_size - 1 - head[0]), 1.), 
+                (('wall-yb', state.grid_size - 1 - head[1]), 1.),
+                (('wall-yt', head[1]), 1.)
+            ]
+        elif dir_ == (1,0):
+            wall_features += [
+                (('wall-yb', head[0]), 1.), 
+                (('wall-yt', state.grid_size - 1 - head[0]), 1.), 
+                (('wall-xl', state.grid_size - 1 - head[1]), 1.),
+                (('wall-xr', head[1]), 1.)
+            ]
+        elif dir_ == (-1,0):
+            wall_features += [
+                (('wall-yt', head[0]), 1.), 
+                (('wall-yb', state.grid_size - 1 - head[0]), 1.), 
+                (('wall-xr', state.grid_size - 1 - head[1]), 1.),
+                (('wall-xl', head[1]), 1.)
+            ]
+        features += [(f,v) for f,v in wall_features if abs(f[1]) < self.radius]
+
+
+        if not authorized_move:
+            features += [("non-auth", 1.)]
 
         # revert changes
         if action.norm() == 1:
@@ -101,13 +153,15 @@ class FeatureExtractor:
         for f,v in features:
             if f == "trapped":
                 arrayFeatures[self.prefix["tot"] - 1] += 1.
+            elif f == "non-auth":
+                arrayFeatures[self.prefix["non-auth"]] += 1.
             elif f[0] == "candy" and f[1] == CANDY_VAL:
                 arrayFeatures[self.prefix["candy1"] + self.index[f[2]]] += 1.
             elif f[0] == "candy" and f[1] == CANDY_BONUS:
                 arrayFeatures[self.prefix["candy2"] + self.index[f[2]]] += 1.
             elif f[0] in ["adv-head", "adv-tail", "my-tail"]:
                 arrayFeatures[self.prefix[f[0]] + self.index[f[1]]] += 1.
-            elif f[0] in ["x", "y"]:
+            elif f[0] in ["wall-xr", "wall-xl", "wall-yt", "wall-yb"]: #["x", "y"]:
                 arrayFeatures[self.prefix[f[0]] + f[1]] += 1.
             else:
                 print "ERROR: feature not recognized", f
@@ -116,13 +170,15 @@ class FeatureExtractor:
     def keyToIndex(self, f):
         if f == "trapped":
             return self.prefix["tot"] - 1
+        elif f == "non-auth":
+            return self.prefix["non-auth"]
         elif f[0] == "candy" and f[1] == CANDY_VAL:
             return self.prefix["candy1"] + self.index[f[2]]
         elif f[0] == "candy" and f[1] == CANDY_BONUS:
             return self.prefix["candy2"] + self.index[f[2]]
         elif f[0] in ["adv-head", "adv-tail", "my-tail"]:
             return self.prefix[f[0]] + self.index[f[1]]
-        elif f[0] in ["x", "y"]:
+        elif f[0] in ["wall-xr", "wall-xl", "wall-yt", "wall-yb"]: #["x", "y"]:
             return self.prefix[f[0]] + f[1]
 
     def sparseExtractor(self, features):
