@@ -49,12 +49,12 @@ Setting it to anything else will keep this list unchanged.
 
 ## Running simulations
 
-Once you filled the config file, you can simply run 500 (without the GUI) to get some stats about how the AIs perform against each other:
+Once you filled the config file, you can easily run 500 simulations (without the GUI) to get some stats about how the AIs perform against each other:
 ```
 $ python simulation.py 500 [load] 
 ```
 
-If you do use the `load` parameter, this will load pre-trained weights for the RL agents, otherwise it will first run trial games 
+If you do use the `load` parameter, this will load pre-trained weights for the RL agents, otherwise it will first run some trial games 
 to learn such weights. In the latter case, learned weights will be saved in the `data/` folder with the name provided in the config
 file.
 For example, `simple-ql-r6.p` and `simple-pg-r6.p` contain the weights of RL agents trained respectively via Q-learning 
