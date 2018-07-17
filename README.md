@@ -4,8 +4,16 @@
   <img src="https://sds-dubois.github.io/img/projects/snake_game.gif" alt="Game demo" />
 </p>
 
-Read the [blog post](https://sds-dubois.github.io/2017/01/03/Multiplayer-Snake-AI.html) to get an overview of this project, 
-as well as some details on the reinforcement learning methods implemented (Q-learning with function approximation by neural networks).
+
+This project provides
+- an interface for a multi-player snake game inpired by [slither.io](http://slither.io/)
+- implementations of various agents based on reinforcement learning (Q-learning, Policy Gradients) and game theory (adversarial search such as Minimax, Alpha-beta pruning ...)
+
+The multiagent nature of this game provides endless opportunities to explore RL algorithms (eg. curriculum learning, how opponents during training episodes impact learned behaviors, ...) and is also a nice way of assessing the relative performance of each methods.  
+In addition, it is also possible to study how different reward functions or game rules will shape the agents' strategies: for example, is it better to grow as much as possible by eating candies or to try and kill other players to end the game as quickly as possible?
+
+Read [this blog post](https://sds-dubois.github.io/2017/01/03/Multiplayer-Snake-AI.html) to get an overview of this project
+as well as some details on one of the reinforcement learning methods implemented (Q-learning with function approximation by neural networks).
 
 
 ## Visualizing individual games
@@ -70,6 +78,10 @@ set in the config file. Note that the snakes' id correspond to the strategy's in
 - `features.py` implements a `FeatureExtractor` to derive useful features from any state and used by RL agents
 - `interface.py`, `agent.py`, `snake.py`, `move.py`, `hp.py` contain the general code for the game
 
+
+## License
+
+[MIT License](LICENSE)
 
 ## Have fun!
 
